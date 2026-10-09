@@ -97,9 +97,9 @@ export default async function TravelsConfirmedPage({
               </span>
             </div>
 
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-6 items-center">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 sm:gap-6 items-center">
               <div>
-                <div className="text-[64px] sm:text-[88px] font-semibold leading-[.9]">{offer.originCode}</div>
+                <div className="text-[36px] sm:text-[64px] md:text-[88px] font-semibold leading-[.9]">{offer.originCode}</div>
                 <div className="text-[13px] text-neutral-700">{offer.originCity}</div>
               </div>
               <div className="flex items-center gap-2.5 text-accent">
@@ -108,7 +108,7 @@ export default async function TravelsConfirmedPage({
                 <span className="flex-1 border-t border-dashed border-accent" />
               </div>
               <div className="text-right">
-                <div className="text-[64px] sm:text-[88px] font-semibold leading-[.9]">{offer.destinationCode}</div>
+                <div className="text-[36px] sm:text-[64px] md:text-[88px] font-semibold leading-[.9]">{offer.destinationCode}</div>
                 <div className="text-[13px] text-neutral-700">{offer.destinationCity}</div>
               </div>
             </div>

@@ -512,7 +512,7 @@ export default function LogisticsBookPage() {
               </>
             )}
 
-            <div className="flex justify-between pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-2">
               <Button
                 variant="secondary"
                 disabled={step === 0}
@@ -522,7 +522,7 @@ export default function LogisticsBookPage() {
               </Button>
               <Button
                 variant="primary"
-                className="min-w-[180px] h-10"
+                className="w-full sm:w-auto sm:min-w-[180px] h-10"
                 disabled={!canContinue || booking}
                 onClick={handleNext}
               >
