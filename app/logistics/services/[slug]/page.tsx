@@ -50,10 +50,10 @@ export default async function LogisticsServicePage({
         </section>
 
         <section className="ins-container pt-20">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-4">
             {svc.benefits.map((b) => (
-              <div key={b.t} className="p-6 border border-divider rounded-lg bg-card flex flex-col gap-2">
-                <Icon name="check" size={20} className="text-accent" />
+              <div key={b.t} className="flex flex-col gap-2.5">
+                <Icon name="check" size={28} className="text-accent" />
                 <div className="text-xl font-semibold">{b.t}</div>
                 <p className="text-sm text-neutral-700 m-0">{b.d}</p>
               </div>
@@ -91,7 +91,7 @@ export default async function LogisticsServicePage({
         </section>
 
         <section className="ins-container pt-20 pb-24">
-          <div className="bg-accent-900 text-white p-10 rounded-2xl flex flex-wrap items-center gap-6">
+          <div className="bg-accent-900 text-white p-6 sm:p-10 rounded-2xl flex flex-wrap items-center gap-6">
             <div className="text-2xl sm:text-4xl font-semibold leading-tight mr-auto">{svc.ctaBand}</div>
             <LinkButton href="/logistics/book" variant="inverse" className="h-11">
               {svc.cta}

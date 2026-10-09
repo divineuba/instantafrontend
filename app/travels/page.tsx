@@ -186,10 +186,10 @@ export default function TravelsHomePage() {
           </div>
         </section>
 
-        <section className="ins-container pt-20 grid gap-5 md:grid-cols-3">
+        <section className="ins-container pt-20 grid gap-x-8 gap-y-10 md:grid-cols-3">
           {TRAVEL_WHY.map((w) => (
-            <div key={w.t} className="p-6 border border-divider rounded-lg bg-card flex flex-col gap-2.5">
-              <Icon name={w.icon} size={24} className="text-accent" />
+            <div key={w.t} className="flex flex-col gap-2.5">
+              <Icon name={w.icon} size={28} className="text-accent" />
               <div className="text-xl font-semibold">{w.t}</div>
               <p className="text-sm text-neutral-700 m-0">{w.d}</p>
             </div>
@@ -197,7 +197,7 @@ export default function TravelsHomePage() {
         </section>
 
         <section className="ins-container pt-20 pb-24">
-          <div className="bg-accent-900 text-white p-10 rounded-2xl flex flex-wrap items-center gap-6">
+          <div className="bg-accent-900 text-white p-6 sm:p-10 rounded-2xl flex flex-wrap items-center gap-6">
             <div className="text-2xl sm:text-4xl font-semibold leading-tight mr-auto">
               Flying for business?
             </div>

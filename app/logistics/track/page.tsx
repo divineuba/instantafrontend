@@ -326,7 +326,7 @@ function TrackPageInner() {
           </div>
           <h1 className="text-[clamp(32px,4.4vw,56px)] leading-[1.05]">{headline}</h1>
         </div>
-        <Field label="Tracking ID" className="w-[260px] sm:w-[300px]">
+        <Field label="Tracking ID" className="w-full sm:w-[260px] lg:w-[300px]">
           <Input
             value={inputId}
             onChange={(e) => setInputId(e.target.value)}

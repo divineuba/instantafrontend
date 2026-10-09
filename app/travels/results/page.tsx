@@ -175,9 +175,10 @@ function ResultsBody() {
                   </div>
                   {o && (
                     <>
-                      <div className="grid grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-4 items-center">
+                      <div className="text-xs text-neutral-700 sm:hidden">{o.outboundDate}</div>
+                      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] sm:grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-2 sm:gap-4 items-center">
                         <div>
-                          <div className="text-2xl font-semibold leading-none">{o.outboundDepart}</div>
+                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.outboundDepart}</div>
                           <div className="text-xs text-neutral-600">{o.originCode}</div>
                         </div>
                         <div className="flex flex-col items-center gap-1">
@@ -188,14 +189,15 @@ function ResultsBody() {
                           </span>
                         </div>
                         <div>
-                          <div className="text-2xl font-semibold leading-none">{o.outboundArrive}</div>
+                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.outboundArrive}</div>
                           <div className="text-xs text-neutral-600">{o.destinationCode}</div>
                         </div>
-                        <div className="text-xs text-neutral-700">{o.outboundDate}</div>
+                        <div className="hidden sm:block text-xs text-neutral-700">{o.outboundDate}</div>
                       </div>
-                      <div className="grid grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-4 items-center">
+                      <div className="text-xs text-neutral-700 sm:hidden">{o.returnDate}</div>
+                      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] sm:grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-2 sm:gap-4 items-center">
                         <div>
-                          <div className="text-2xl font-semibold leading-none">{o.returnDepart}</div>
+                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.returnDepart}</div>
                           <div className="text-xs text-neutral-600">{o.destinationCode}</div>
                         </div>
                         <div className="flex flex-col items-center gap-1">
@@ -206,10 +208,10 @@ function ResultsBody() {
                           </span>
                         </div>
                         <div>
-                          <div className="text-2xl font-semibold leading-none">{o.returnArrive}</div>
+                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.returnArrive}</div>
                           <div className="text-xs text-neutral-600">{o.originCode}</div>
                         </div>
-                        <div className="text-xs text-neutral-700">{o.returnDate}</div>
+                        <div className="hidden sm:block text-xs text-neutral-700">{o.returnDate}</div>
                       </div>
                       <div className="flex gap-4 text-xs text-neutral-700">
                         <span className="flex items-center gap-1.5">

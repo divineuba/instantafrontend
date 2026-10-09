@@ -143,17 +143,14 @@ export default function LogisticsHomePage() {
 
         {/* Answers */}
         <section className="ins-container pt-24">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {ANSWERS.map((a) => (
-              <div
-                key={a.title}
-                className="p-6 border border-divider rounded-lg bg-card flex flex-col gap-2.5 min-h-[220px]"
-              >
-                <div className="flex justify-between text-accent">
-                  <Icon name={a.icon} size={24} />
+              <div key={a.title} className="flex flex-col gap-2.5">
+                <div className="flex justify-between items-start text-accent">
+                  <Icon name={a.icon} size={28} />
                   <span className="text-xs text-neutral-600">{a.q}</span>
                 </div>
-                <div className="text-2xl font-semibold mt-auto leading-tight">
+                <div className="text-xl font-semibold leading-tight">
                   {a.title}
                 </div>
                 <p className="text-sm text-neutral-700 m-0">{a.body}</p>
@@ -237,7 +234,7 @@ export default function LogisticsHomePage() {
 
         {/* Track CTA band */}
         <section className="ins-container pt-24 pb-24">
-          <div className="bg-accent-900 text-white p-10 rounded-2xl flex flex-wrap items-center gap-8">
+          <div className="bg-accent-900 text-white p-6 sm:p-10 rounded-2xl flex flex-wrap items-center gap-6 sm:gap-8">
             <div className="mr-auto">
               <div className="text-2xl md:text-4xl font-semibold leading-tight">
                 Where&apos;s my package?
@@ -251,11 +248,11 @@ export default function LogisticsHomePage() {
               onChange={(e) => setTrackingId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && goTrack()}
               placeholder="INS-23892"
-              className="w-[260px] sm:w-[320px] h-11 px-3 text-sm bg-transparent text-white border border-accent-700 rounded-md outline-none placeholder:text-accent-300"
+              className="w-full sm:w-[260px] lg:w-[320px] h-11 px-3 text-sm bg-transparent text-white border border-accent-700 rounded-md outline-none placeholder:text-accent-300"
             />
             <button
               onClick={goTrack}
-              className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap cursor-pointer font-semibold text-sm rounded-[0.4rem] border border-white bg-white text-accent-900 hover:bg-accent-100 h-11 px-4"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-[7px] whitespace-nowrap cursor-pointer font-semibold text-sm rounded-[0.4rem] border border-white bg-white text-accent-900 hover:bg-accent-100 h-11 px-4"
             >
               Track
             </button>

@@ -235,7 +235,7 @@ export default function Home() {
 
         {/* For Business */}
         <section className="ins-container pt-28 pb-28">
-          <div className="rounded-xl bg-accent-900 text-white grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-12 p-10 lg:p-12">
+          <div className="rounded-xl bg-accent-900 text-white grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-12 p-6 sm:p-10 lg:p-12">
             <div className="flex flex-col gap-4">
               <div className="text-[11px] tracking-[.14em] uppercase text-accent-300 font-semibold">
                 04 — Instanta for Business
