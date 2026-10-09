@@ -8,6 +8,7 @@ import { LinkButton } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Segmented } from "@/components/ui/segmented";
+import { SectionKicker } from "@/components/ui/section-kicker";
 
 interface ServiceItem {
   name: string;
@@ -109,9 +110,7 @@ export default function ServicesPage() {
       <main className="flex-1 ins-container pt-14">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_420px] gap-10 items-end pb-8 border-b border-divider">
           <div>
-            <div className="text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold mb-2.5">
-              Services directory
-            </div>
+            <SectionKicker>Services directory</SectionKicker>
             <h1 className="text-[clamp(32px,4.4vw,56px)] leading-[1.05]">
               Everything Instanta does, in one place.
             </h1>

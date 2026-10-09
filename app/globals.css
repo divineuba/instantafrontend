@@ -59,6 +59,7 @@
 
 @theme inline {
   --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-script: var(--font-caveat), cursive;
 
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
@@ -207,13 +208,44 @@ a:hover {
   padding-inline: var(--content-pad);
 }
 
-/* Header responsive breakpoints — see Header.tsx */
-@media (max-width: 1280px) {
-  .hdr-opt {
-    display: none !important;
-  }
+/* ---------------------------------------------------------------------
+   Marketing-hero accents (Caveat script font + highlighter marks),
+   mirroring odoo.com's hand-drawn marketing language.
+   --------------------------------------------------------------------- */
+.font-script {
+  font-family: var(--font-script) !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
 }
 
+.mark-highlight {
+  background-image: linear-gradient(transparent 62%, #fbbf24 62%);
+  background-repeat: no-repeat;
+  background-size: 100% 0.95em;
+  background-position: 0 85%;
+  padding: 0 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.mark-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.mark-underline::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: -0.14em;
+  height: 0.12em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 6' preserveAspectRatio='none'%3E%3Cpath d='M0 4 Q 3 0 6 4 T 12 4 T 18 4 T 24 4' fill='none' stroke='%23017e84' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 24px 6px;
+}
+
+/* Header responsive breakpoints — see Header.tsx */
 @media (max-width: 1100px) {
   .hdr-opt2 {
     display: none !important;

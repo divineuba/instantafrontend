@@ -6,10 +6,12 @@ export function Table({
   ...props
 }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <table
-      className={cn("w-full border-separate border-spacing-0 text-sm", className)}
-      {...props}
-    />
+    <div className="w-full overflow-x-auto">
+      <table
+        className={cn("w-full border-separate border-spacing-0 text-sm", className)}
+        {...props}
+      />
+    </div>
   );
 }
 

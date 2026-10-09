@@ -4,6 +4,7 @@ import { Footer } from "@/components/chrome/footer";
 import { LinkButton } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { SectionKicker } from "@/components/ui/section-kicker";
 import { ContactSalesForm } from "@/components/business/contact-sales-form";
 
 const SOLUTIONS: { icon: IconName; title: string; body: string }[] = [
@@ -62,17 +63,12 @@ export default function BusinessPage() {
 
         {/* Solutions */}
         <section className="ins-container pt-24">
-          <div className="text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold mb-2.5">
-            Solutions
-          </div>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <SectionKicker>Solutions</SectionKicker>
+          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
             {SOLUTIONS.map((o) => (
-              <div
-                key={o.title}
-                className="p-6 border border-divider rounded-lg bg-card flex flex-col gap-3 min-h-[240px]"
-              >
-                <Icon name={o.icon} size={26} className="text-accent" />
-                <div className="text-xl font-semibold mt-auto">{o.title}</div>
+              <div key={o.title} className="flex flex-col gap-3">
+                <Icon name={o.icon} size={28} className="text-accent" />
+                <div className="text-xl font-semibold">{o.title}</div>
                 <p className="text-sm text-neutral-700 m-0">{o.body}</p>
               </div>
             ))}
@@ -82,9 +78,7 @@ export default function BusinessPage() {
         {/* Live in a day */}
         <section className="ins-container pt-24 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-14">
           <div>
-            <div className="text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold mb-2.5">
-              How it works
-            </div>
+            <SectionKicker>How it works</SectionKicker>
             <h2 className="text-[clamp(28px,3.2vw,44px)] leading-tight">
               Live in a day.
             </h2>

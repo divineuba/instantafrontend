@@ -5,15 +5,8 @@ import { LinkButton } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { ServiceSelector } from "@/components/home/service-selector";
+import { SectionKicker } from "@/components/ui/section-kicker";
 import { businesses } from "@/lib/businesses.config";
-
-function SectionKicker({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[11px] tracking-[.14em] uppercase text-accent-700 mb-2.5 font-semibold">
-      {children}
-    </div>
-  );
-}
 
 const WHY: { n: string; icon: IconName; title: string; body: string }[] = [
   {
@@ -89,8 +82,9 @@ export default function Home() {
                 + More soon
               </Tag>
             </div>
-            <h1 className="text-[clamp(40px,5.2vw,72px)] leading-[1.05]">
-              One group. Many ways to move forward.
+            <h1 className="font-script text-[clamp(40px,6vw,80px)] leading-[1.05] text-neutral-900">
+              One group.{" "}
+              <span className="mark-highlight">Many ways to move forward.</span>
             </h1>
             <p className="text-lg leading-relaxed max-w-xl text-neutral-700">
               We bring together trusted services across logistics, travel and
@@ -203,15 +197,11 @@ export default function Home() {
           <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-2xl mb-8">
             Every service, one standard.
           </h2>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
             {WHY.map((w) => (
-              <div
-                key={w.n}
-                className="p-6 border border-divider rounded-lg bg-card flex flex-col gap-3 min-h-[220px]"
-              >
-                <span className="text-xs text-neutral-500">{w.n}</span>
-                <Icon name={w.icon} size={26} className="text-accent" />
-                <div className="text-xl font-semibold mt-auto">{w.title}</div>
+              <div key={w.n} className="flex flex-col gap-3">
+                <Icon name={w.icon} size={28} className="text-accent" />
+                <div className="text-xl font-semibold">{w.title}</div>
                 <p className="text-sm text-neutral-700 m-0">{w.body}</p>
               </div>
             ))}

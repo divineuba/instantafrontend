@@ -22,26 +22,29 @@ export function Header({
   active?: string;
 }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
   const pathname = usePathname();
 
   React.useEffect(() => {
-    // Close the mega menu whenever the route changes. This is a genuine
-    // sync-with-external-navigation side effect, not derivable state.
+    // Close the mega menu / mobile drawer whenever the route changes. This
+    // is a genuine sync-with-external-navigation side effect, not derivable
+    // state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
+    setMobileOpen(false);
   }, [pathname]);
 
   const vertical = business !== "group" ? getBusiness(business) : undefined;
 
   return (
     <header
-      className="relative z-50 bg-bg border-b border-divider"
+      className="relative z-50 bg-bg"
       onMouseLeave={() => setMenuOpen(false)}
     >
-      <div className="ins-container flex items-center gap-5 h-16">
+      <div className="ins-container relative flex items-center h-[60px]">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-text no-underline"
+          className="flex items-center gap-2.5 text-text no-underline shrink-0"
         >
           <span className="relative w-6 h-6 rounded-[7px] bg-accent block">
             <span className="absolute right-[22%] top-[22%] w-[30%] h-[30%] rounded-full bg-warm" />
@@ -59,14 +62,19 @@ export function Header({
           )}
         </Link>
 
-        <nav className="flex items-center gap-5 mr-auto whitespace-nowrap">
+        <nav
+          className={cn(
+            "hidden md:flex items-center gap-5 whitespace-nowrap absolute left-1/2 top-0 h-full -translate-x-1/2 transition-shadow",
+            menuOpen && "shadow-[0_1px_0_0_#F3F4F6]",
+          )}
+        >
           <button
             type="button"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
             className={cn(
               "flex items-center gap-1 bg-transparent border-0 p-0 text-sm cursor-pointer",
-              menuOpen ? "text-accent" : "text-text",
+              menuOpen ? "text-accent font-semibold" : "text-text",
             )}
           >
             Businesses <Icon name="down" size={14} />
@@ -97,29 +105,94 @@ export function Header({
           </Link>
         </nav>
 
-        <div className="flex items-center gap-1.5">
-          <LinkButton
-            href="/logistics/track"
-            variant="ghost"
-            className="hdr-opt text-text px-2.5 py-1.5"
+        <div className="hidden md:flex items-center gap-5 ml-auto">
+          <Link
+            href="/account"
+            className="text-sm font-medium text-text no-underline hover:text-accent"
           >
-            <Icon name="package" size={16} /> Track delivery
-          </LinkButton>
-          <LinkButton
-            href="/travels"
-            variant="ghost"
-            className="hdr-opt text-text px-2.5 py-1.5"
-          >
-            <Icon name="plane" size={16} /> Book a flight
-          </LinkButton>
-          <LinkButton href="/account" variant="secondary" className="ml-2">
             Log in
-          </LinkButton>
+          </Link>
           <LinkButton href="/account" variant="primary">
             Get started
           </LinkButton>
         </div>
+
+        <div className="flex md:hidden items-center gap-2 ml-auto">
+          <LinkButton
+            href="/account"
+            variant="primary"
+            className="px-3 py-1.5 text-[13px]"
+          >
+            Get started
+          </LinkButton>
+          <button
+            type="button"
+            aria-expanded={mobileOpen}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMobileOpen((v) => !v)}
+            className="flex items-center justify-center size-9 -mr-1.5 bg-transparent border-0 text-text cursor-pointer"
+          >
+            <Icon name={mobileOpen ? "x" : "menu"} size={22} />
+          </button>
+        </div>
       </div>
+
+      {mobileOpen && (
+        <div className="md:hidden absolute left-0 right-0 top-[60px] bg-bg border-t border-divider shadow-lg max-h-[calc(100vh-60px)] overflow-y-auto">
+          <nav className="ins-container py-4 flex flex-col">
+            <div className="text-[11px] tracking-[.14em] uppercase text-neutral-600 pt-2 pb-1.5">
+              Businesses
+            </div>
+            {businesses.map((b) => (
+              <Link
+                key={b.id}
+                href={b.href}
+                className="flex items-center gap-2.5 py-2.5 border-b border-divider text-text no-underline text-sm"
+              >
+                <Icon name={b.icon} size={16} className="text-accent-700" />
+                {b.label}
+              </Link>
+            ))}
+            <Link
+              href="/services"
+              className="py-2.5 border-b border-divider text-text no-underline text-sm font-medium mt-2"
+            >
+              Services
+            </Link>
+            <Link
+              href="/business"
+              className="py-2.5 border-b border-divider text-text no-underline text-sm font-medium"
+            >
+              For Business
+            </Link>
+            <Link
+              href="/logistics/track"
+              className="py-2.5 border-b border-divider text-text no-underline text-sm font-medium"
+            >
+              Track delivery
+            </Link>
+            <Link
+              href="/travels"
+              className="py-2.5 border-b border-divider text-text no-underline text-sm font-medium"
+            >
+              Book a flight
+            </Link>
+            <Link
+              href="/account/support"
+              className="py-2.5 text-text no-underline text-sm font-medium"
+            >
+              Support
+            </Link>
+            <LinkButton
+              href="/account"
+              variant="secondary"
+              className="mt-4 justify-center"
+            >
+              Log in
+            </LinkButton>
+          </nav>
+        </div>
+      )}
 
       {vertical && (
         <div className="border-t border-divider">
@@ -154,18 +227,15 @@ export function Header({
       )}
 
       {menuOpen && (
-        <div className="absolute left-0 right-0 top-16 bg-bg border-t border-b border-divider shadow-lg">
+        <div className="absolute left-0 right-0 top-[60px] bg-bg border-t border-divider shadow-lg">
           <div
-            className="ins-container py-8 pb-9 grid gap-0"
+            className="ins-container py-8 pb-9 grid gap-7"
             style={{
               gridTemplateColumns: `repeat(${businesses.length}, minmax(0,1fr)) minmax(0,1fr) 260px`,
             }}
           >
             {businesses.map((b) => (
-              <div
-                key={b.id}
-                className="pr-7 mr-7 border-r border-divider flex flex-col gap-3.5"
-              >
+              <div key={b.id} className="flex flex-col gap-3.5">
                 <div className="flex items-center gap-2 text-accent-700">
                   <Icon name={b.icon} size={20} />
                   <span className="text-[11px] tracking-[.14em] uppercase">
@@ -196,7 +266,7 @@ export function Header({
               </div>
             ))}
 
-            <div className="pr-7 mr-7 border-r border-divider flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 text-neutral-600">
                 <Icon name="plus" size={20} />
                 <span className="text-[11px] tracking-[.14em] uppercase">
