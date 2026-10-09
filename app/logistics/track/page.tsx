@@ -8,6 +8,7 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { trackDelivery, type Delivery, SPEEDS, WEIGHT_BANDS } from "@/lib/logistics";
+import { ApiError } from "@/lib/api";
 
 const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: string; icon: IconName }[] = [
   { key: "picked", label: "Picked up", icon: "package" },
@@ -242,7 +243,37 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
   );
 }
 
-function TrackNotFound({ id }: { id: string }) {
+function TrackNotFound({
+  id,
+  error,
+  onRetry,
+}: {
+  id: string;
+  error?: boolean;
+  onRetry?: () => void;
+}) {
+  if (error) {
+    return (
+      <div className="p-16 rounded-xl border border-divider flex flex-col items-center gap-3.5 text-center">
+        <Icon name="alert" size={32} className="text-error" />
+        <div className="text-2xl font-semibold">Something went wrong</div>
+        <p className="text-[15px] text-neutral-700 max-w-md m-0">
+          We couldn&apos;t reach the tracking service. Check your connection and try again.
+        </p>
+        <div className="flex gap-2.5">
+          {onRetry && (
+            <Button variant="secondary" onClick={onRetry}>
+              Try again
+            </Button>
+          )}
+          <LinkButton href="/account/support" variant="ghost">
+            Contact support
+          </LinkButton>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-16 rounded-xl border border-divider flex flex-col items-center gap-3.5 text-center">
       <Icon name="search" size={32} className="text-neutral-600" />
@@ -274,16 +305,19 @@ function TrackPageInner() {
   const [delivery, setDelivery] = React.useState<Delivery | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [searchedId, setSearchedId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState(false);
 
   const lookup = React.useCallback(async (id: string) => {
     if (!id.trim()) return;
     setLoading(true);
     setSearchedId(id);
+    setError(false);
     try {
       const d = await trackDelivery(id.trim());
       setDelivery(d);
-    } catch {
+    } catch (err) {
       setDelivery(null);
+      setError(!(err instanceof ApiError && err.status === 404));
     } finally {
       setLoading(false);
     }
@@ -339,7 +373,9 @@ function TrackPageInner() {
       </form>
 
       {searchedId && !loading && delivery && <TrackResult delivery={delivery} />}
-      {searchedId && !loading && !delivery && <TrackNotFound id={searchedId} />}
+      {searchedId && !loading && !delivery && (
+        <TrackNotFound id={searchedId} error={error} onRetry={() => lookup(searchedId)} />
+      )}
       {!searchedId && !loading && <TrackNotFound id="" />}
     </main>
   );

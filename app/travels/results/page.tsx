@@ -39,22 +39,31 @@ function ResultsBody() {
   const [airlineFilter, setAirlineFilter] = React.useState<Set<string>>(new Set());
   const [data, setData] = React.useState<SearchFlightsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
 
-  React.useEffect(() => {
+  const runSearch = React.useCallback(() => {
     const activeStops = stops.flatMap((on, i) => (on ? [i] : []));
-    // Re-querying the server whenever sort/stops/airline filters change and
-    // flagging in-flight is a genuine sync-with-external-system effect.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
+    setError(false);
     searchFlights({
       sort,
       stops: activeStops.length < 3 ? activeStops : undefined,
       airlines: airlineFilter.size > 0 ? Array.from(airlineFilter) : undefined,
     })
       .then(setData)
-      .catch(() => setData(null))
+      .catch(() => {
+        setData(null);
+        setError(true);
+      })
       .finally(() => setLoading(false));
   }, [sort, stops, airlineFilter]);
+
+  React.useEffect(() => {
+    // Re-querying the server whenever sort/stops/airline filters change and
+    // flagging in-flight is a genuine sync-with-external-system effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    runSearch();
+  }, [runSearch]);
 
   function toggleStop(i: number) {
     setStops((s) => s.map((v, j) => (j === i ? !v : v)));
@@ -146,10 +155,25 @@ function ResultsBody() {
           </div>
 
           <div className="text-[13px] text-neutral-600">
-            {loading ? "Searching…" : `${data?.resultCount ?? 0} flights · prices are per adult, return, including taxes`}
+            {loading
+              ? "Searching…"
+              : error
+                ? "Search failed"
+                : `${data?.resultCount ?? 0} flights · prices are per adult, return, including taxes`}
           </div>
 
-          {!loading && data?.noResults && (
+          {!loading && error && (
+            <div className="p-14 border border-divider rounded-xl bg-card flex flex-col items-center gap-3 text-center">
+              <Icon name="alert" size={30} className="text-error" />
+              <div className="text-2xl font-semibold">Something went wrong</div>
+              <p className="text-sm text-neutral-700 m-0">
+                We couldn&apos;t reach the flight search service. Check your connection and try again.
+              </p>
+              <Button variant="secondary" onClick={runSearch}>Try again</Button>
+            </div>
+          )}
+
+          {!loading && !error && data?.noResults && (
             <div className="p-14 border border-divider rounded-xl bg-card flex flex-col items-center gap-3 text-center">
               <Icon name="plane" size={30} className="text-neutral-500" />
               <div className="text-2xl font-semibold">No flights match these filters</div>
