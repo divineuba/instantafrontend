@@ -110,7 +110,16 @@
 
 /* ---------------------------------------------------------------------
    Base element styles (ported from instanta.css)
+
+   Wrapped in @layer base so Tailwind's utility classes (which live in
+   @layer utilities, declared later in the cascade-layer order by
+   `@import "tailwindcss"`) correctly win over these element-selector
+   resets. Unlayered CSS always beats layered CSS regardless of
+   specificity, so without this, rules like `a { color: ... }` or
+   `p { margin: ... }` silently overrode every text-color and margin
+   utility applied to links and paragraphs across the app.
    --------------------------------------------------------------------- */
+@layer base {
 *,
 *::before,
 *::after {
@@ -268,3 +277,4 @@ a:hover {
     display: none !important;
   }
 }
+} /* end @layer base */

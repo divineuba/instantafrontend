@@ -11,6 +11,7 @@ import {
   comingSoonBusinesses,
   getBusiness,
 } from "@/lib/businesses.config";
+import { useAuth } from "@/lib/auth-context";
 
 export type HeaderBusiness = "group" | "logistics" | "travels";
 
@@ -23,7 +24,9 @@ export function Header({
 }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const pathname = usePathname();
+  const { user, loading, logout } = useAuth();
 
   React.useEffect(() => {
     // Close the mega menu / mobile drawer whenever the route changes. This
@@ -32,6 +35,7 @@ export function Header({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
     setMobileOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
 
   const vertical = business !== "group" ? getBusiness(business) : undefined;
@@ -106,25 +110,72 @@ export function Header({
         </nav>
 
         <div className="hidden md:flex items-center gap-5 ml-auto">
-          <Link
-            href="/account"
-            className="text-sm font-medium text-text no-underline hover:text-accent"
-          >
-            Log in
-          </Link>
-          <LinkButton href="/account" variant="primary">
-            Get started
-          </LinkButton>
+          {!loading && user ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((v) => !v)}
+                aria-expanded={userMenuOpen}
+                className="flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer text-text"
+              >
+                <span className="size-8 rounded-[10px] bg-accent-200 text-accent-800 grid place-items-center font-semibold text-xs">
+                  {user.firstName[0]}
+                  {user.lastName[0]}
+                </span>
+                <span className="text-sm font-medium">{user.firstName}</span>
+                <Icon name="down" size={14} />
+              </button>
+              {userMenuOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-56 bg-bg border border-divider rounded-xl shadow-lg p-1.5 z-10">
+                  <Link
+                    href="/account"
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-sm text-text no-underline rounded-md hover:bg-accent-100"
+                  >
+                    <Icon name="user" size={15} /> My account
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => logout()}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm text-text bg-transparent border-0 cursor-pointer rounded-md hover:bg-accent-100 text-left"
+                  >
+                    <Icon name="logout" size={15} /> Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-text no-underline hover:text-accent"
+              >
+                Log in
+              </Link>
+              <LinkButton href="/register" variant="primary">
+                Get started
+              </LinkButton>
+            </>
+          )}
         </div>
 
         <div className="flex md:hidden items-center gap-2 ml-auto">
-          <LinkButton
-            href="/account"
-            variant="primary"
-            className="px-3 py-1.5 text-[13px]"
-          >
-            Get started
-          </LinkButton>
+          {!loading && user ? (
+            <LinkButton
+              href="/account"
+              variant="primary"
+              className="px-3 py-1.5 text-[13px]"
+            >
+              My account
+            </LinkButton>
+          ) : (
+            <LinkButton
+              href="/register"
+              variant="primary"
+              className="px-3 py-1.5 text-[13px]"
+            >
+              Get started
+            </LinkButton>
+          )}
           <button
             type="button"
             aria-expanded={mobileOpen}
@@ -183,13 +234,23 @@ export function Header({
             >
               Support
             </Link>
-            <LinkButton
-              href="/account"
-              variant="secondary"
-              className="mt-4 justify-center"
-            >
-              Log in
-            </LinkButton>
+            {!loading && user ? (
+              <LinkButton
+                href="/account"
+                variant="secondary"
+                className="mt-4 justify-center"
+              >
+                My account
+              </LinkButton>
+            ) : (
+              <LinkButton
+                href="/login"
+                variant="secondary"
+                className="mt-4 justify-center"
+              >
+                Log in
+              </LinkButton>
+            )}
           </nav>
         </div>
       )}
