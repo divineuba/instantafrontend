@@ -217,6 +217,12 @@ a:hover {
    Shared layout utility
    --------------------------------------------------------------------- */
 .ins-container {
+  /* Explicit width (not just max-width) so flex items using this class —
+     e.g. <main className="flex-1 ins-container"> inside a flex-col body —
+     reliably stretch to the viewport instead of growing to fit unbreakable
+     content (native <input>/<button> min-content) and getting silently
+     clipped by the global overflow-x: hidden. */
+  width: 100%;
   max-width: var(--content-max);
   margin-inline: auto;
   padding-inline: var(--content-pad);

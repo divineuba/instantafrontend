@@ -258,8 +258,9 @@ export function Header({
       {vertical && (
         <div className="border-t border-divider">
           <div className="ins-container flex items-center gap-5 h-12 whitespace-nowrap">
-            <span className="flex items-center gap-2 text-[15px] tracking-[.08em] uppercase text-accent-700">
-              <Icon name={vertical.icon} size={16} /> {vertical.label}
+            <span className="flex items-center gap-2 text-[15px] tracking-[.08em] uppercase text-accent-700 shrink-0">
+              <Icon name={vertical.icon} size={16} />
+              <span className="hidden sm:inline">{vertical.label}</span>
             </span>
             <nav className="flex gap-[18px] mr-auto min-w-0 overflow-x-auto whitespace-nowrap">
               {vertical.subnav.map((s) => {
@@ -280,7 +281,7 @@ export function Header({
                 );
               })}
             </nav>
-            <LinkButton href={vertical.cta.href} variant="primary">
+            <LinkButton href={vertical.cta.href} variant="primary" className="shrink-0 px-3 sm:px-4">
               {vertical.cta.label}
             </LinkButton>
           </div>

@@ -58,13 +58,13 @@ export default function ActivityPage() {
         </p>
       </div>
 
-      <div className="flex gap-1 border-b border-divider">
+      <div className="flex gap-1 border-b border-divider overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`px-3.5 py-2.5 text-sm font-medium border-0 border-b-2 bg-transparent cursor-pointer -mb-px ${
+            className={`shrink-0 px-3.5 py-2.5 text-sm font-medium border-0 border-b-2 bg-transparent cursor-pointer -mb-px whitespace-nowrap ${
               tab === t.key
                 ? "text-accent-800 border-accent"
                 : "text-neutral-600 border-transparent hover:text-text"

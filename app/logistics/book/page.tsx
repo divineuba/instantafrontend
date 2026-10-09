@@ -95,12 +95,12 @@ function StepBar({ step, onGo }: { step: number; onGo: (i: number) => void }) {
         >
           <span className={`h-[3px] ${i <= step ? "bg-accent" : "bg-neutral-300"}`} />
           <span
-            className={`flex items-center gap-1.5 text-[13px] ${
+            className={`flex items-center justify-center sm:justify-start gap-1.5 text-[13px] ${
               i <= step ? "text-text" : "text-neutral-600"
             }`}
           >
             <Icon name={s.icon} size={14} />
-            {s.label}
+            <span className="hidden sm:inline truncate">{s.label}</span>
           </span>
         </button>
       ))}

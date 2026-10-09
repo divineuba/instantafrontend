@@ -113,12 +113,12 @@ export default function TeamPage() {
 
       <div className="flex flex-col gap-1">
         {team.map((m) => (
-          <div key={m.id} className="flex items-center gap-3 px-4 py-3 bg-card border border-divider rounded-lg">
+          <div key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-card border border-divider rounded-lg">
             <span className="size-9 grid place-items-center bg-accent-100 text-accent-800 rounded-[10px] font-semibold text-xs shrink-0">
               {m.user.firstName[0]}
               {m.user.lastName[0]}
             </span>
-            <span className="flex-1 min-w-0">
+            <span className="flex-1 min-w-[160px]">
               <span className="block text-sm font-medium truncate">
                 {m.user.firstName} {m.user.lastName}
               </span>
@@ -126,27 +126,29 @@ export default function TeamPage() {
                 {m.user.email} {m.costCentre ? `· ${m.costCentre}` : ""}
               </span>
             </span>
-            <span className="text-xs text-neutral-600 w-28 text-right">
-              ${(m.spentCents / 100).toFixed(2)}
-              {m.monthlyLimitCents ? ` / $${(m.monthlyLimitCents / 100).toFixed(2)}` : ""}
+            <span className="flex items-center gap-2 ml-auto">
+              <span className="text-xs text-neutral-600 w-24 sm:w-28 text-right shrink-0">
+                ${(m.spentCents / 100).toFixed(2)}
+                {m.monthlyLimitCents ? ` / $${(m.monthlyLimitCents / 100).toFixed(2)}` : ""}
+              </span>
+              {m.role === "OWNER" ? (
+                <Tag variant="accent">Owner</Tag>
+              ) : (
+                <Select
+                  value={m.role}
+                  onChange={(e) => changeRole(m, e.target.value as "ADMIN" | "MEMBER")}
+                  className="w-24 sm:w-28 min-h-[32px] text-xs"
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="MEMBER">Member</option>
+                </Select>
+              )}
+              {m.role !== "OWNER" && (
+                <Button variant="secondary" onClick={() => toggleCanBook(m)}>
+                  {m.canBook ? "Can book" : "Can't book"}
+                </Button>
+              )}
             </span>
-            {m.role === "OWNER" ? (
-              <Tag variant="accent">Owner</Tag>
-            ) : (
-              <Select
-                value={m.role}
-                onChange={(e) => changeRole(m, e.target.value as "ADMIN" | "MEMBER")}
-                className="w-28 min-h-[32px] text-xs"
-              >
-                <option value="ADMIN">Admin</option>
-                <option value="MEMBER">Member</option>
-              </Select>
-            )}
-            {m.role !== "OWNER" && (
-              <Button variant="secondary" onClick={() => toggleCanBook(m)}>
-                {m.canBook ? "Can book" : "Can't book"}
-              </Button>
-            )}
           </div>
         ))}
       </div>
