@@ -25,6 +25,9 @@ export function Header({
   const pathname = usePathname();
 
   React.useEffect(() => {
+    // Close the mega menu whenever the route changes. This is a genuine
+    // sync-with-external-navigation side effect, not derivable state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
   }, [pathname]);
 

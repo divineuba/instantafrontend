@@ -11,9 +11,9 @@ const tagVariants = cva(
         info: "bg-accent-100 text-accent-800",
         neutral: "bg-neutral-200 text-neutral-800",
         outline: "border border-accent-300 text-accent-700 bg-white",
-        success: "bg-[oklch(0.94_0.04_155)] text-[oklch(0.40_0.09_155)]",
-        warning: "bg-[oklch(0.95_0.05_80)] text-[oklch(0.45_0.09_70)]",
-        error: "bg-[oklch(0.95_0.03_25)] text-[oklch(0.48_0.13_25)]",
+        success: "bg-[#e9f6ec] text-[#1e7e34]",
+        warning: "bg-[#fff8e1] text-[#996404]",
+        error: "bg-[#fbe7e9] text-[#a71d2a]",
       },
     },
     defaultVariants: {
