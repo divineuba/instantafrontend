@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import { Scene } from "@/components/illustrations/scene";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
 import { LinkButton } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export default async function LogisticsServicePage({
             </div>
           </div>
           <figure className="relative aspect-[4/3] rounded-lg overflow-hidden border border-divider">
-            <Image src="/images/hero.jpg" alt="" fill sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" priority />
+            <Scene variant="delivery" className="absolute inset-0" />
           </figure>
         </section>
 

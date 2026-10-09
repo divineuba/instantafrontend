@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Scene } from "@/components/illustrations/scene";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
 import { LinkButton } from "@/components/ui/button";
@@ -59,8 +59,8 @@ export default function TravelsHomePage() {
       <main className="flex-1">
         <section className="relative border-b border-divider">
           <div className="absolute inset-0">
-            <Image src="/images/hero.jpg" alt="" fill sizes="100vw" className="object-cover" priority />
-            <div className="absolute inset-0 bg-gradient-to-b from-accent-900/70 to-accent-900/30" />
+            <Scene variant="travel" className="absolute inset-0" />
+            <div className="absolute inset-0 bg-gradient-to-b from-accent-900/40 to-accent-900/10" />
           </div>
           <div className="relative ins-container pt-20 pb-16 text-white">
             <span className="text-[11px] tracking-[.14em] uppercase text-accent-200">

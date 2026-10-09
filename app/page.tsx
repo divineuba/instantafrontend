@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Scene } from "@/components/illustrations/scene";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
 import { LinkButton } from "@/components/ui/button";
@@ -101,14 +101,7 @@ export default function Home() {
             </div>
           </div>
           <figure className="relative aspect-[5/4] rounded-lg overflow-hidden border border-divider">
-            <Image
-              src="/images/hero.jpg"
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 45vw, 100vw"
-              className="object-cover"
-              priority
-            />
+            <Scene variant="network" className="absolute inset-0" />
           </figure>
         </section>
 
@@ -138,12 +131,9 @@ export default function Home() {
                 className="rounded-lg border border-divider bg-card overflow-hidden flex flex-col"
               >
                 <div className="aspect-[16/7] border-b border-divider relative">
-                  <Image
-                    src="/images/hero.jpg"
-                    alt=""
-                    fill
-                    sizes="(min-width: 768px) 50vw, 100vw"
-                    className="object-cover"
+                  <Scene
+                    variant={b.id === "logistics" ? "delivery" : "travel"}
+                    className="absolute inset-0"
                   />
                 </div>
                 <div className="p-7 flex flex-col gap-4 flex-1">
