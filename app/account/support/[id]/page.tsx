@@ -6,6 +6,9 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 import { Tag } from "@/components/ui/tag";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import { getSupportTicket, addSupportMessage, type SupportTicketDetail } from "@/lib/account";
 
@@ -18,6 +21,7 @@ export default function SupportTicketPage() {
   const [reply, setReply] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const [replyError, setReplyError] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -46,6 +50,7 @@ export default function SupportTicketPage() {
       const updated = await addSupportMessage(params.id, reply);
       setTicket(updated);
       setReply("");
+      toast("Reply sent.", "success");
     } catch (err) {
       setReplyError(err instanceof ApiError ? err.message : "Couldn't send message.");
     } finally {
@@ -53,8 +58,21 @@ export default function SupportTicketPage() {
     }
   }
 
-  if (loading) return <div className="text-sm text-neutral-600">Loading ticket…</div>;
-  if (error && !ticket) return <div className="text-sm text-error">{error}</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 max-w-[720px]">
+        <Skeleton variant="text" className="w-32" />
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-64 h-7" />
+          <Skeleton variant="text" className="w-48" />
+        </div>
+        <SkeletonText lines={4} />
+      </div>
+    );
+  }
+  if (error && !ticket) {
+    return <EmptyState icon="alert" title="Couldn't load this ticket" description={error} />;
+  }
   if (!ticket) return null;
 
   return (

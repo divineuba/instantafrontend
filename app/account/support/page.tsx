@@ -7,6 +7,10 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import { getSupportTickets, createSupportTicket, type SupportTicketSummary } from "@/lib/account";
 import { useFieldErrors } from "@/lib/use-field-errors";
@@ -29,6 +33,7 @@ export default function SupportPage() {
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const { errors, setFieldError, validateAll } = useFieldErrors<TicketField>();
+  const toast = useToast();
 
   const ticketValidators: Record<TicketField, () => string | undefined> = {
     subject: () => (form.subject.trim() ? undefined : "Subject is required"),
@@ -60,6 +65,7 @@ export default function SupportPage() {
       setForm({ subject: "", category: "Delivery", body: "" });
       setShowForm(false);
       load();
+      toast("Ticket created.", "success");
       router.push(`/account/support/${ticket.id}`);
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Couldn't create ticket.");
@@ -70,15 +76,15 @@ export default function SupportPage() {
 
   return (
     <div className="flex flex-col gap-5 max-w-[760px]">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Support</h1>
-          <p className="text-sm text-neutral-600 mt-1">Get help with deliveries, trips, or payments.</p>
-        </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
-          <Icon name="plus" size={14} /> New ticket
-        </Button>
-      </div>
+      <PageHeader
+        title="Support"
+        subtitle="Get help with deliveries, trips, or payments."
+        actions={
+          <Button onClick={() => setShowForm((v) => !v)}>
+            <Icon name="plus" size={14} /> New ticket
+          </Button>
+        }
+      />
 
       {showForm && (
         <form onSubmit={handleCreate} className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-4">
@@ -121,14 +127,12 @@ export default function SupportPage() {
         </form>
       )}
 
-      {loading && <div className="text-sm text-neutral-600">Loading…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && <SkeletonText lines={4} />}
+      {error && <EmptyState icon="alert" title="Couldn't load support tickets" description={error} />}
 
       {!loading && !error && tickets && (
         <div className="flex flex-col gap-1">
-          {tickets.length === 0 && (
-            <div className="text-sm text-neutral-600 py-8 text-center">No support tickets yet.</div>
-          )}
+          {tickets.length === 0 && <EmptyState icon="chat" title="No support tickets yet" />}
           {tickets.map((t) => (
             <Link
               key={t.id}

@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Icon } from "@/components/ui/icon";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { Segmented } from "@/components/ui/segmented";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonTableRows } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import {
   getAdminBookings,
   approveRefund,
@@ -25,6 +28,7 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [busyRef, setBusyRef] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback((t: BookingsTab) => {
     setLoading(true);
@@ -49,6 +53,7 @@ export default function AdminBookingsPage() {
     try {
       await approveRefund(pnr);
       load(tab);
+      toast("Refund approved.", "success");
     } finally {
       setBusyRef(null);
     }
@@ -59,6 +64,7 @@ export default function AdminBookingsPage() {
     try {
       await rejectRefund(pnr);
       load(tab);
+      toast("Refund rejected.", "success");
     } finally {
       setBusyRef(null);
     }
@@ -66,26 +72,32 @@ export default function AdminBookingsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Flight bookings</h1>
-          <p className="text-sm text-neutral-600 mt-1">Travel operations tickets, refunds, routes and documents.</p>
-        </div>
-        <Segmented
-          name="bookings-tab"
-          value={tab}
-          onChange={handleTabChange}
-          options={[
-            { value: "book", label: "Bookings" },
-            { value: "refunds", label: "Refunds" },
-            { value: "routes", label: "Routes & airlines" },
-            { value: "docs", label: "Documents" },
-          ]}
-        />
-      </div>
+      <PageHeader
+        title="Flight bookings"
+        subtitle="Travel operations tickets, refunds, routes and documents."
+        actions={
+          <Segmented
+            name="bookings-tab"
+            value={tab}
+            onChange={handleTabChange}
+            options={[
+              { value: "book", label: "Bookings" },
+              { value: "refunds", label: "Refunds" },
+              { value: "routes", label: "Routes & airlines" },
+              { value: "docs", label: "Documents" },
+            ]}
+          />
+        }
+      />
 
-      {loading && <div className="text-sm text-neutral-600">Loading…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <Table>
+          <Tbody>
+            <SkeletonTableRows rows={6} columns={6} />
+          </Tbody>
+        </Table>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load bookings" description={error} />}
 
       {data && !loading && !error && tab === "book" && (
         <Table>
@@ -118,8 +130,8 @@ export default function AdminBookingsPage() {
             ))}
             {(data as AdminBookingRow[]).length === 0 && (
               <Tr>
-                <Td colSpan={8} className="text-center text-neutral-600 py-8">
-                  No active bookings.
+                <Td colSpan={8} className="p-0">
+                  <EmptyState icon="plane" title="No active bookings" />
                 </Td>
               </Tr>
             )}
@@ -175,8 +187,8 @@ export default function AdminBookingsPage() {
             ))}
             {(data as AdminRefundRow[]).length === 0 && (
               <Tr>
-                <Td colSpan={7} className="text-center text-neutral-600 py-8">
-                  No refund requests.
+                <Td colSpan={7} className="p-0">
+                  <EmptyState icon="card" title="No refund requests" />
                 </Td>
               </Tr>
             )}
@@ -214,13 +226,11 @@ export default function AdminBookingsPage() {
       )}
 
       {data && !loading && !error && tab === "docs" && "empty" in data && (
-        <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-          <span className="size-12 grid place-items-center bg-accent-100 text-accent-800 rounded-full">
-            <Icon name="file" size={20} />
-          </span>
-          <div className="font-semibold">{(data as AdminDocsEmpty).message}</div>
-          <div className="text-sm text-neutral-600 max-w-sm">{(data as AdminDocsEmpty).sub}</div>
-        </div>
+        <EmptyState
+          icon="file"
+          title={(data as AdminDocsEmpty).message}
+          description={(data as AdminDocsEmpty).sub}
+        />
       )}
     </div>
   );

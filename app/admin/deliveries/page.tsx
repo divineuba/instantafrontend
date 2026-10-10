@@ -5,6 +5,10 @@ import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
 import { Segmented } from "@/components/ui/segmented";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonTableRows } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import {
   getAdminDeliveries,
   refundDelivery,
@@ -24,6 +28,7 @@ export default function AdminDeliveriesPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback((t: DeliveriesTab) => {
     setLoading(true);
@@ -48,6 +53,7 @@ export default function AdminDeliveriesPage() {
     try {
       await refundDelivery(id);
       load(tab);
+      toast("Delivery refunded.", "success");
     } finally {
       setBusyId(null);
     }
@@ -58,6 +64,7 @@ export default function AdminDeliveriesPage() {
     try {
       await reattemptDelivery(id);
       load(tab);
+      toast("Delivery reattempt scheduled.", "success");
     } finally {
       setBusyId(null);
     }
@@ -65,26 +72,32 @@ export default function AdminDeliveriesPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Deliveries</h1>
-          <p className="text-sm text-neutral-600 mt-1">Logistics operations orders, fleet, zones and disputes.</p>
-        </div>
-        <Segmented
-          name="deliveries-tab"
-          value={tab}
-          onChange={handleTabChange}
-          options={[
-            { value: "del", label: "Deliveries" },
-            { value: "riders", label: "Riders & fleet" },
-            { value: "zones", label: "Zones & pricing" },
-            { value: "failed", label: "Failed" },
-          ]}
-        />
-      </div>
+      <PageHeader
+        title="Deliveries"
+        subtitle="Logistics operations orders, fleet, zones and disputes."
+        actions={
+          <Segmented
+            name="deliveries-tab"
+            value={tab}
+            onChange={handleTabChange}
+            options={[
+              { value: "del", label: "Deliveries" },
+              { value: "riders", label: "Riders & fleet" },
+              { value: "zones", label: "Zones & pricing" },
+              { value: "failed", label: "Failed" },
+            ]}
+          />
+        }
+      />
 
-      {loading && <div className="text-sm text-neutral-600">Loading…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <Table>
+          <Tbody>
+            <SkeletonTableRows rows={6} columns={6} />
+          </Tbody>
+        </Table>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load deliveries" description={error} />}
 
       {data && !loading && !error && tab === "del" && (
         <Table>
@@ -117,8 +130,8 @@ export default function AdminDeliveriesPage() {
             ))}
             {(data as AdminDeliveryRow[]).length === 0 && (
               <Tr>
-                <Td colSpan={8} className="text-center text-neutral-600 py-8">
-                  No active deliveries.
+                <Td colSpan={8} className="p-0">
+                  <EmptyState icon="package" title="No active deliveries" />
                 </Td>
               </Tr>
             )}
@@ -244,8 +257,8 @@ export default function AdminDeliveriesPage() {
             ))}
             {(data as AdminFailedDeliveryRow[]).length === 0 && (
               <Tr>
-                <Td colSpan={6} className="text-center text-neutral-600 py-8">
-                  No failed deliveries. 🎉
+                <Td colSpan={6} className="p-0">
+                  <EmptyState icon="check" title="No failed deliveries" />
                 </Td>
               </Tr>
             )}

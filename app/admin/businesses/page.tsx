@@ -4,6 +4,9 @@ import * as React from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Card, CardTitle, CardBody } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonCardGrid } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAdminBusinesses, type AdminBusinessCard } from "@/lib/admin";
 
 export default function AdminBusinessesPage() {
@@ -30,15 +33,13 @@ export default function AdminBusinessesPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div>
-        <h1 className="text-2xl font-bold">Businesses</h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          Every business under the Instanta group, live or planned.
-        </p>
-      </div>
+      <PageHeader
+        title="Businesses"
+        subtitle="Every business under the Instanta group, live or planned."
+      />
 
-      {loading && <div className="text-sm text-neutral-600">Loading businesses…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && <SkeletonCardGrid count={4} className="sm:grid-cols-2" />}
+      {error && <EmptyState icon="alert" title="Couldn't load businesses" description={error} />}
 
       {data && !loading && !error && (
         <div className="grid gap-4 sm:grid-cols-2">

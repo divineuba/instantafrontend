@@ -5,9 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
+import { Field, Input } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createWorkspace } from "@/lib/account";
+import { useToast } from "@/lib/toast-context";
 import { VerifyEmailBanner } from "@/components/account/verify-email-banner";
 
 interface NavItem {
@@ -47,6 +51,10 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   const [wsOpen, setWsOpen] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
+  const [newBizOpen, setNewBizOpen] = React.useState(false);
+  const [newBizName, setNewBizName] = React.useState("");
+  const [newBizError, setNewBizError] = React.useState<string | undefined>(undefined);
+  const toast = useToast();
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -57,15 +65,27 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   const isBusiness = activeMembership?.workspace.type === "BUSINESS";
   const nav = isBusiness ? BUSINESS_NAV : PERSONAL_NAV;
 
-  async function handleCreateBusiness() {
-    const name = window.prompt("Name your business workspace");
-    if (!name) return;
+  function openCreateBusiness() {
+    setNewBizName("");
+    setNewBizError(undefined);
+    setNewBizOpen(true);
+  }
+
+  async function handleCreateBusiness(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newBizName.trim();
+    if (!name) {
+      setNewBizError("Enter a name for your business workspace");
+      return;
+    }
     setCreating(true);
     try {
       const workspace = await createWorkspace(name);
       await refresh();
       setActiveWorkspaceId(workspace.id);
       setWsOpen(false);
+      setNewBizOpen(false);
+      toast("Business workspace created.", "success");
       router.push("/account/business");
     } finally {
       setCreating(false);
@@ -217,12 +237,11 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
               ))}
               <button
                 type="button"
-                disabled={creating}
-                onClick={handleCreateBusiness}
+                onClick={openCreateBusiness}
                 className="w-full flex items-center gap-2.5 px-2 py-2 text-sm text-accent-700 bg-transparent border-0 border-t border-divider cursor-pointer text-left mt-1 pt-2.5"
               >
                 <Icon name="plus" size={16} />
-                {creating ? "Creating…" : "Create business account"}
+                Create business account
               </button>
             </div>
           )}
@@ -266,6 +285,34 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         {user.emailVerified === false && <VerifyEmailBanner email={user.email} />}
         <div className="p-6 md:p-10 flex-1">{children}</div>
       </main>
+
+      <Modal open={newBizOpen} onClose={() => setNewBizOpen(false)}>
+        <ModalHeader title="Create business account" onClose={() => setNewBizOpen(false)} />
+        <form onSubmit={handleCreateBusiness}>
+          <ModalBody>
+            <Field label="Business name" required error={newBizError}>
+              <Input
+                autoFocus
+                value={newBizName}
+                onChange={(e) => {
+                  setNewBizName(e.target.value);
+                  if (newBizError) setNewBizError(undefined);
+                }}
+                invalid={!!newBizError}
+                placeholder="Acme Logistics Ltd"
+              />
+            </Field>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" onClick={() => setNewBizOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={creating}>
+              {creating ? "Creating…" : "Create"}
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
     </div>
   );
 }

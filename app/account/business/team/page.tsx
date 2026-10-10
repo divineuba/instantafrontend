@@ -60,6 +60,7 @@ export default function TeamPage() {
       setInvite({ email: "", costCentre: "" });
       setShowInvite(false);
       load();
+      toast("Invite sent.", "success");
     } catch (err) {
       setInviteError(err instanceof ApiError ? err.message : "Couldn't invite member.");
     } finally {
@@ -71,29 +72,45 @@ export default function TeamPage() {
     if (!workspaceId) return;
     await updateMember(workspaceId, m.id, { canBook: !m.canBook });
     load();
+    toast("Permissions updated.", "success");
   }
 
   async function changeRole(m: TeamMember, role: "ADMIN" | "MEMBER") {
     if (!workspaceId) return;
     await updateMember(workspaceId, m.id, { role });
     load();
+    toast("Role updated.", "success");
   }
 
-  if (!workspaceId) return <div className="text-sm text-neutral-600">No business workspace selected.</div>;
-  if (loading) return <div className="text-sm text-neutral-600">Loading team…</div>;
-  if (error || !team) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (!workspaceId) {
+    return <EmptyState icon="building" title="No business workspace selected" />;
+  }
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 max-w-[880px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-24 h-7" />
+          <Skeleton variant="text" className="w-72" />
+        </div>
+        <SkeletonText lines={5} />
+      </div>
+    );
+  }
+  if (error || !team) {
+    return <EmptyState icon="alert" title="Couldn't load team" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-5 max-w-[880px]">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Team</h1>
-          <p className="text-sm text-neutral-600 mt-1">Members, roles, and booking permissions.</p>
-        </div>
-        <Button onClick={() => setShowInvite((v) => !v)}>
-          <Icon name="plus" size={14} /> Invite member
-        </Button>
-      </div>
+      <PageHeader
+        title="Team"
+        subtitle="Members, roles, and booking permissions."
+        actions={
+          <Button onClick={() => setShowInvite((v) => !v)}>
+            <Icon name="plus" size={14} /> Invite member
+          </Button>
+        }
+      />
 
       {showInvite && (
         <form onSubmit={handleInvite} className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-4">

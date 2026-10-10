@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAdminReports, type AdminReports } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 
@@ -32,10 +35,7 @@ export default function AdminReportsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div>
-        <h1 className="text-2xl font-bold">Reports</h1>
-        <p className="text-sm text-neutral-600 mt-1">Performance trends across the last 9 months.</p>
-      </div>
+      <PageHeader title="Reports" subtitle="Performance trends across the last 9 months." />
 
       {data && (
         <div className="flex flex-wrap gap-1 border-b border-divider">
@@ -55,8 +55,17 @@ export default function AdminReportsPage() {
         </div>
       )}
 
-      {loading && <div className="text-sm text-neutral-600">Loading report…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-48 w-full rounded-lg" />
+        </div>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load report" description={error} />}
 
       {data && !loading && !error && (
         <>
@@ -93,7 +102,7 @@ export default function AdminReportsPage() {
               </div>
             ))}
             {data.cities.length === 0 && (
-              <div className="text-sm text-neutral-600">No city data yet.</div>
+              <EmptyState icon="pin" title="No city data yet" />
             )}
           </Card>
         </>

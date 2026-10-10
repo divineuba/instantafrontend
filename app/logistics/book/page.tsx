@@ -85,25 +85,30 @@ const INITIAL_STATE: FormState = {
 
 function StepBar({ step, onGo }: { step: number; onGo: (i: number) => void }) {
   return (
-    <div className="grid grid-cols-5 gap-1.5 mb-9">
-      {STEP_DEFS.map((s, i) => (
-        <button
-          key={s.label}
-          type="button"
-          onClick={() => i <= step && onGo(i)}
-          className="text-left bg-transparent border-0 p-0 font-inherit cursor-pointer flex flex-col gap-2"
-        >
-          <span className={`h-[3px] ${i <= step ? "bg-accent" : "bg-neutral-300"}`} />
-          <span
-            className={`flex items-center justify-center sm:justify-start gap-1.5 text-[13px] ${
-              i <= step ? "text-text" : "text-neutral-600"
-            }`}
-          >
-            <Icon name={s.icon} size={14} />
-            <span className="hidden sm:inline truncate">{s.label}</span>
-          </span>
-        </button>
-      ))}
+    <div className="border-b border-divider">
+      <div className="ins-container flex items-center gap-6 py-3.5 flex-wrap">
+        <span className="font-semibold text-lg flex items-center gap-1.5">
+          <Icon name="package" size={16} className="text-accent" />
+          Send a package
+        </span>
+        <span className="text-[13px] text-neutral-700">Step {step + 1} of 5</span>
+        <div className="flex gap-1 items-center ml-auto">
+          {STEP_DEFS.map((s, i) => (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => i <= step && onGo(i)}
+              disabled={i > step}
+              className={`flex items-center gap-1.5 text-[13px] px-2 py-1 border-x-0 border-t-0 border-b-2 bg-transparent ${
+                i === step ? "border-accent" : "border-transparent"
+              } ${i <= step ? "text-text cursor-pointer" : "text-neutral-500 cursor-default"}`}
+            >
+              <span className="font-semibold">{i + 1}</span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -281,18 +286,9 @@ export default function LogisticsBookPage() {
   return (
     <>
       <Header business="logistics" active="book" />
+      <StepBar step={step} onGo={setStep} />
       <main className="flex-1 ins-container pt-10 pb-24">
-        <div className="flex items-end justify-between mb-7 gap-4 flex-wrap">
-          <div>
-            <div className="text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold mb-2">
-              Send a package
-            </div>
-            <h1 className="text-[clamp(30px,4vw,48px)] leading-[1.05]">{STEP_TITLES[step]}</h1>
-          </div>
-          <span className="text-[13px] text-neutral-600">Step {step + 1} of 5</span>
-        </div>
-
-        <StepBar step={step} onGo={setStep} />
+        <h1 className="text-[clamp(30px,4vw,48px)] leading-[1.05] mb-7">{STEP_TITLES[step]}</h1>
 
         <div className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-9 items-start">
           <div className="p-7 sm:p-8 rounded-xl border border-divider flex flex-col gap-5">

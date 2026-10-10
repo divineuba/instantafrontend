@@ -3,8 +3,11 @@
 import * as React from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
-import { Tag } from "@/components/ui/tag";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonTableRows } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { getAdminPromotions, createPromotion, updatePromotionStatus, type AdminPromotion } from "@/lib/admin";
 
 const STATUSES = ["DRAFT", "SCHEDULED", "LIVE", "PAUSED", "ENDED"] as const;
@@ -15,6 +18,7 @@ export default function AdminPromotionsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const toast = useToast();
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -41,6 +45,7 @@ export default function AdminPromotionsPage() {
     try {
       await createPromotion({ name, audience, business, icon, placement, dateRange });
       load();
+      toast("Promotion created.", "success");
     } finally {
       setCreating(false);
     }
@@ -51,6 +56,7 @@ export default function AdminPromotionsPage() {
     try {
       await updatePromotionStatus(id, status);
       load();
+      toast("Status updated.", "success");
     } finally {
       setBusyId(null);
     }
@@ -58,18 +64,24 @@ export default function AdminPromotionsPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Promotions</h1>
-          <p className="text-sm text-neutral-600 mt-1">Campaigns running across the group and each business.</p>
-        </div>
-        <Button variant="primary" disabled={creating} onClick={handleCreate}>
-          {creating ? "Creating…" : "New promotion"}
-        </Button>
-      </div>
+      <PageHeader
+        title="Promotions"
+        subtitle="Campaigns running across the group and each business."
+        actions={
+          <Button variant="primary" disabled={creating} onClick={handleCreate}>
+            {creating ? "Creating…" : "New promotion"}
+          </Button>
+        }
+      />
 
-      {loading && <div className="text-sm text-neutral-600">Loading promotions…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <Table>
+          <Tbody>
+            <SkeletonTableRows rows={5} columns={6} />
+          </Tbody>
+        </Table>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load promotions" description={error} />}
 
       {data && !loading && !error && (
         <Table>
@@ -114,8 +126,8 @@ export default function AdminPromotionsPage() {
             ))}
             {data.length === 0 && (
               <Tr>
-                <Td colSpan={6} className="text-center text-neutral-600 py-8">
-                  No promotions yet.
+                <Td colSpan={6} className="p-0">
+                  <EmptyState icon="megaphone" title="No promotions yet" />
                 </Td>
               </Tr>
             )}

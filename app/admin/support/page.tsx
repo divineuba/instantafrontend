@@ -4,6 +4,10 @@ import * as React from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonTableRows } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { getAdminSupport, updateAdminTicket, type AdminTicketRow } from "@/lib/admin";
 
 const STATUSES = ["OPEN", "AWAITING", "RESOLVED", "CLOSED"] as const;
@@ -13,6 +17,7 @@ export default function AdminSupportPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -32,6 +37,7 @@ export default function AdminSupportPage() {
     try {
       await updateAdminTicket(id, { status });
       load();
+      toast("Ticket updated.", "success");
     } finally {
       setBusyId(null);
     }
@@ -39,13 +45,16 @@ export default function AdminSupportPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div>
-        <h1 className="text-2xl font-bold">Support</h1>
-        <p className="text-sm text-neutral-600 mt-1">Open tickets across every business, newest first.</p>
-      </div>
+      <PageHeader title="Support" subtitle="Open tickets across every business, newest first." />
 
-      {loading && <div className="text-sm text-neutral-600">Loading tickets…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <Table>
+          <Tbody>
+            <SkeletonTableRows rows={6} columns={7} />
+          </Tbody>
+        </Table>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load tickets" description={error} />}
 
       {data && !loading && !error && (
         <Table>
@@ -97,8 +106,8 @@ export default function AdminSupportPage() {
             ))}
             {data.length === 0 && (
               <Tr>
-                <Td colSpan={7} className="text-center text-neutral-600 py-8">
-                  No open tickets. 🎉
+                <Td colSpan={7} className="p-0">
+                  <EmptyState icon="check" title="No open tickets" />
                 </Td>
               </Tr>
             )}

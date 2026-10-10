@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { Segmented } from "@/components/ui/segmented";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAdminOverview, type AdminOverview, type BizFilter } from "@/lib/admin";
 
 export default function AdminOverviewPage() {
@@ -34,33 +37,42 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{data?.ovTitle ?? "Overview"}</h1>
-          <p className="text-sm text-neutral-600 mt-1">
-            {data ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name={data.bizIcon as IconName} size={14} /> {data.bizName}
-              </span>
-            ) : (
-              "Across every Instanta business"
-            )}
-          </p>
-        </div>
-        <Segmented
-          name="biz"
-          value={biz}
-          onChange={setBiz}
-          options={[
-            { value: "all", label: "All businesses" },
-            { value: "logistics", label: "Logistics" },
-            { value: "travels", label: "Travels" },
-          ]}
-        />
-      </div>
+      <PageHeader
+        title={data?.ovTitle ?? "Overview"}
+        subtitle={
+          data ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name={data.bizIcon as IconName} size={14} /> {data.bizName}
+            </span>
+          ) : (
+            "Across every Instanta business"
+          )
+        }
+        actions={
+          <Segmented
+            name="biz"
+            value={biz}
+            onChange={setBiz}
+            options={[
+              { value: "all", label: "All businesses" },
+              { value: "logistics", label: "Logistics" },
+              { value: "travels", label: "Travels" },
+            ]}
+          />
+        }
+      />
 
-      {loading && <div className="text-sm text-neutral-600">Loading overview…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load the overview" description={error} />}
 
       {data && !loading && !error && (
         <>

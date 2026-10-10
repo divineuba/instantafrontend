@@ -5,6 +5,9 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAdminFinance, type AdminFinance } from "@/lib/admin";
 
 export default function AdminFinancePage() {
@@ -31,13 +34,23 @@ export default function AdminFinancePage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div>
-        <h1 className="text-2xl font-bold">Finance</h1>
-        <p className="text-sm text-neutral-600 mt-1">Group revenue, settlements and payment transactions.</p>
-      </div>
+      <PageHeader title="Finance" subtitle="Group revenue, settlements and payment transactions." />
 
-      {loading && <div className="text-sm text-neutral-600">Loading finance…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Skeleton className="h-40 rounded-lg" />
+            <Skeleton className="h-40 rounded-lg" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-lg" />
+        </div>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load finance" description={error} />}
 
       {data && !loading && !error && (
         <>
@@ -124,8 +137,8 @@ export default function AdminFinancePage() {
                 ))}
                 {data.finTx.length === 0 && (
                   <Tr>
-                    <Td colSpan={7} className="text-center text-neutral-600 py-8">
-                      No transactions in the last 30 days.
+                    <Td colSpan={7} className="p-0">
+                      <EmptyState icon="card" title="No transactions in the last 30 days" />
                     </Td>
                   </Tr>
                 )}

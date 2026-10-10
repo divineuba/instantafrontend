@@ -4,6 +4,10 @@ import * as React from "react";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonTableRows } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import {
   getAdminUsers,
@@ -33,6 +37,7 @@ export default function AdminUsersPage() {
   const [assigning, setAssigning] = React.useState(false);
   const [assignError, setAssignError] = React.useState<string | null>(null);
   const [emailFieldError, setEmailFieldError] = React.useState<string | undefined>(undefined);
+  const toast = useToast();
 
   function validateEmail() {
     const message = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(assignEmail.trim())
@@ -64,6 +69,7 @@ export default function AdminUsersPage() {
       await assignAdmin({ email: assignEmail.trim(), role: assignRole });
       setAssignEmail("");
       load();
+      toast("Admin assigned.", "success");
     } catch (err) {
       setAssignError(
         err instanceof ApiError ? err.message : "Couldn't assign that role. Try again.",
@@ -79,6 +85,7 @@ export default function AdminUsersPage() {
     try {
       await revokeAdmin(id);
       load();
+      toast("Admin access revoked.", "success");
     } finally {
       setBusyId(null);
     }
@@ -86,13 +93,16 @@ export default function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div>
-        <h1 className="text-2xl font-bold">Users &amp; permissions</h1>
-        <p className="text-sm text-neutral-600 mt-1">Admin accounts and what each role can access.</p>
-      </div>
+      <PageHeader title="Users & permissions" subtitle="Admin accounts and what each role can access." />
 
-      {loading && <div className="text-sm text-neutral-600">Loading…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && (
+        <Table>
+          <Tbody>
+            <SkeletonTableRows rows={5} columns={5} />
+          </Tbody>
+        </Table>
+      )}
+      {error && <EmptyState icon="alert" title="Couldn't load admin users" description={error} />}
 
       {data && !loading && !error && (
         <>
@@ -156,8 +166,8 @@ export default function AdminUsersPage() {
               ))}
               {data.admins.length === 0 && (
                 <Tr>
-                  <Td colSpan={5} className="text-center text-neutral-600 py-8">
-                    No admins assigned yet.
+                  <Td colSpan={5} className="p-0">
+                    <EmptyState icon="users" title="No admins assigned yet" />
                   </Td>
                 </Tr>
               )}
