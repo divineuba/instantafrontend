@@ -1,12 +1,16 @@
+import { Suspense, type ReactNode } from "react";
 import { Scene } from "@/components/illustrations/scene";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
 import { LinkButton } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ServiceSelector } from "@/components/home/service-selector";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { AnimatedCounter } from "@/components/motion/animated-counter";
 import { businesses } from "@/lib/businesses.config";
+import { getPublicStats } from "@/lib/stats";
 import { FadeInWhenVisible } from "@/components/motion/fade-in-when-visible";
 
 const CITIES = ["Lagos", "Abuja", "Accra", "Nairobi"];
@@ -44,12 +48,47 @@ const WHY: { n: string; icon: IconName; title: string; body: string }[] = [
   },
 ];
 
-const METRICS = [
-  { v: "50K+", l: "Customers served" },
-  { v: "100K+", l: "Successful deliveries" },
-  { v: "20+", l: "Cities served" },
-  { v: "24/7", l: "Customer support" },
-];
+const METRIC_CELL_CLASS =
+  "p-7 flex flex-col gap-1.5 border-b sm:border-b-0 lg:border-r border-divider last:border-b-0 lg:last:border-r-0";
+
+function MetricCell({ value, label }: { value: ReactNode; label: string }) {
+  return (
+    <div className={METRIC_CELL_CLASS}>
+      <div className="font-semibold text-[clamp(32px,3.6vw,48px)] leading-none text-accent-700 whitespace-nowrap">
+        {value}
+      </div>
+      <div className="text-sm text-neutral-700">{label}</div>
+    </div>
+  );
+}
+
+function MetricsSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className={METRIC_CELL_CLASS}>
+          <Skeleton className="h-10 w-20" />
+          <Skeleton variant="text" className="w-28" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+async function HomeMetrics() {
+  const stats = await getPublicStats();
+  return (
+    <>
+      <MetricCell value={<AnimatedCounter value={stats.customersServed} suffix="+" />} label="Customers served" />
+      <MetricCell
+        value={<AnimatedCounter value={stats.successfulDeliveries} suffix="+" />}
+        label="Successful deliveries"
+      />
+      <MetricCell value={<AnimatedCounter value={stats.citiesServed} />} label="Cities served" />
+      <MetricCell value="24/7" label="Customer support" />
+    </>
+  );
+}
 
 const BIZ_OFFERS: { icon: IconName; title: string; body: string }[] = [
   { icon: "truck", title: "Corporate logistics", body: "Scheduled and bulk deliveries with SLAs." },
@@ -229,23 +268,10 @@ export default function Home() {
           <FadeInWhenVisible className="rounded-lg border border-divider overflow-hidden grid sm:grid-cols-2 lg:grid-cols-[280px_repeat(4,minmax(0,1fr))]">
             <div className="p-7 border-b sm:border-b-0 sm:border-r border-divider flex flex-col justify-between gap-5">
               <SectionKicker>03 In numbers</SectionKicker>
-              <Tag variant="neutral" className="self-start">
-                Placeholder figures
-              </Tag>
             </div>
-            {METRICS.map((m, i) => (
-              <div
-                key={m.l}
-                className={`p-7 flex flex-col gap-1.5 ${
-                  i < METRICS.length - 1 ? "border-b sm:border-b-0 lg:border-r border-divider" : ""
-                }`}
-              >
-                <div className="font-semibold text-[clamp(32px,3.6vw,48px)] leading-none text-accent-700 whitespace-nowrap">
-                  {m.v}
-                </div>
-                <div className="text-sm text-neutral-700">{m.l}</div>
-              </div>
-            ))}
+            <Suspense fallback={<MetricsSkeleton />}>
+              <HomeMetrics />
+            </Suspense>
           </FadeInWhenVisible>
         </section>
 

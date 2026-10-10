@@ -174,6 +174,38 @@ export function reattemptDelivery(id: string) {
   return apiFetch<unknown>(`/admin/deliveries/${encodeURIComponent(id)}/reattempt`, { method: "POST" });
 }
 
+// ---- Pricing rules --------------------------------------------------------------
+
+export type PricingRuleType = "SPEED" | "WEIGHT_BAND" | "DISTANCE_RATE" | "INSURANCE";
+
+export interface AdminPricingRule {
+  id: string;
+  type: PricingRuleType;
+  code: string;
+  label: string;
+  amount: number;
+  updatedAt: string;
+}
+
+export function getAdminPricingRules() {
+  return apiFetch<AdminPricingRule[]>("/admin/pricing");
+}
+
+export function createPricingRule(input: { type: PricingRuleType; code: string; label: string; amount: number }) {
+  return apiFetch<AdminPricingRule>("/admin/pricing", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updatePricingRule(id: string, input: { label: string; amount: number }) {
+  return apiFetch<AdminPricingRule>(`/admin/pricing/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deletePricingRule(id: string) {
+  return apiFetch<{ ok: true }>(`/admin/pricing/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 // ---- Bookings ------------------------------------------------------------------
 
 export type BookingsTab = "book" | "refunds" | "routes" | "docs";
