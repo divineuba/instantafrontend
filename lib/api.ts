@@ -9,9 +9,27 @@ export class ApiError extends Error {
   }
 }
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+      .then((res) => res.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
+  _retriedAfterRefresh = false,
 ): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -21,6 +39,18 @@ export async function apiFetch<T>(
       ...init?.headers,
     },
   });
+
+  if (
+    res.status === 401 &&
+    !_retriedAfterRefresh &&
+    path !== "/auth/refresh" &&
+    path !== "/auth/login"
+  ) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      return apiFetch<T>(path, init, true);
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
