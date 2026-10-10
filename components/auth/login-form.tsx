@@ -8,6 +8,9 @@ import { Field, Input } from "@/components/ui/field";
 import { ApiError } from "@/lib/api";
 import { login } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type LoginField = "email" | "password";
 
 export function LoginForm() {
   const router = useRouter();
@@ -17,9 +20,16 @@ export function LoginForm() {
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { errors, setFieldError, validateAll } = useFieldErrors<LoginField>();
+
+  const validators: Record<LoginField, () => string | undefined> = {
+    email: () => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? undefined : "Enter a valid email address"),
+    password: () => (password ? undefined : "Password is required"),
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!validateAll(validators)) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -49,24 +59,26 @@ export function LoginForm() {
         </p>
       </div>
 
-      <Field label="Email" required htmlFor="email">
+      <Field label="Email" required htmlFor="email" error={errors.email}>
         <Input
           id="email"
           type="email"
           autoComplete="email"
-          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => setFieldError("email", validators.email())}
+          invalid={!!errors.email}
         />
       </Field>
-      <Field label="Password" required htmlFor="password">
+      <Field label="Password" required htmlFor="password" error={errors.password}>
         <Input
           id="password"
           type="password"
           autoComplete="current-password"
-          required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => setFieldError("password", validators.password())}
+          invalid={!!errors.password}
         />
       </Field>
 

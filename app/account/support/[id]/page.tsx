@@ -17,6 +17,7 @@ export default function SupportTicketPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [reply, setReply] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  const [replyError, setReplyError] = React.useState<string | null>(null);
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -35,14 +36,18 @@ export default function SupportTicketPage() {
 
   async function handleReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!reply.trim()) return;
+    if (!reply.trim()) {
+      setReplyError("Message can't be empty");
+      return;
+    }
+    setReplyError(null);
     setSending(true);
     try {
       const updated = await addSupportMessage(params.id, reply);
       setTicket(updated);
       setReply("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't send message.");
+      setReplyError(err instanceof ApiError ? err.message : "Couldn't send message.");
     } finally {
       setSending(false);
     }
@@ -94,11 +99,12 @@ export default function SupportTicketPage() {
 
       {ticket.status !== "CLOSED" && (
         <form onSubmit={handleReply} className="flex flex-col gap-2">
-          {error && <div className="text-sm text-error">{error}</div>}
+          {replyError && <div className="text-sm text-error">{replyError}</div>}
           <Textarea
             placeholder="Write a reply…"
             value={reply}
             onChange={(e) => setReply(e.target.value)}
+            onBlur={() => setReplyError(reply.trim() ? null : "Message can't be empty")}
           />
           <Button type="submit" disabled={sending} className="self-end">
             {sending ? "Sending…" : "Send reply"}

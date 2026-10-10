@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { fmtUsd, payBooking, type Booking, type PaymentMethodKey } from "@/lib/travels";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type CardField = "cardNumber" | "nameOnCard" | "expiry" | "cvv";
 
 const PAY_METHODS: { key: PaymentMethodKey; label: string; icon: IconName }[] = [
   { key: "CARD", label: "Card", icon: "card" },
@@ -25,11 +28,21 @@ export function PaymentForm({ booking: initialBooking }: { booking: Booking }) {
   const [cvv, setCvv] = React.useState("123");
   const [submitting, setSubmitting] = React.useState(false);
   const [declined, setDeclined] = React.useState(false);
+  const { errors, setFieldError, validateAll } = useFieldErrors<CardField>();
 
   const lastPayment = booking.payments[booking.payments.length - 1];
   const showFailed = declined || lastPayment?.status === "FAILED";
 
+  const cardValidators: Record<CardField, () => string | undefined> = {
+    cardNumber: () =>
+      cardNumber.replace(/\s/g, "").match(/^\d{13,19}$/) ? undefined : "Enter a valid card number",
+    nameOnCard: () => (nameOnCard.trim() ? undefined : "Name on card is required"),
+    expiry: () => (expiry.match(/^\d{2}\s*\/\s*\d{2}$/) ? undefined : "Use MM / YY"),
+    cvv: () => (cvv.match(/^\d{3,4}$/) ? undefined : "Enter a valid CVV"),
+  };
+
   async function handlePay() {
+    if (method === "CARD" && !validateAll(cardValidators)) return;
     setSubmitting(true);
     try {
       const res = await payBooking(booking.id, {
@@ -89,18 +102,39 @@ export function PaymentForm({ booking: initialBooking }: { booking: Booking }) {
 
           {method === "CARD" && (
             <>
-              <Field label="Card number" required>
-                <Input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
+              <Field label="Card number" required error={errors.cardNumber}>
+                <Input
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  onBlur={() => setFieldError("cardNumber", cardValidators.cardNumber())}
+                  invalid={!!errors.cardNumber}
+                />
               </Field>
               <div className="grid sm:grid-cols-3 gap-4">
-                <Field label="Name on card" required>
-                  <Input value={nameOnCard} onChange={(e) => setNameOnCard(e.target.value)} />
+                <Field label="Name on card" required error={errors.nameOnCard}>
+                  <Input
+                    value={nameOnCard}
+                    onChange={(e) => setNameOnCard(e.target.value)}
+                    onBlur={() => setFieldError("nameOnCard", cardValidators.nameOnCard())}
+                    invalid={!!errors.nameOnCard}
+                  />
                 </Field>
-                <Field label="Expiry" required>
-                  <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} />
+                <Field label="Expiry" required error={errors.expiry}>
+                  <Input
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    onBlur={() => setFieldError("expiry", cardValidators.expiry())}
+                    invalid={!!errors.expiry}
+                  />
                 </Field>
-                <Field label="CVV" required>
-                  <Input value={cvv} onChange={(e) => setCvv(e.target.value)} type="password" />
+                <Field label="CVV" required error={errors.cvv}>
+                  <Input
+                    value={cvv}
+                    onChange={(e) => setCvv(e.target.value)}
+                    onBlur={() => setFieldError("cvv", cardValidators.cvv())}
+                    invalid={!!errors.cvv}
+                    type="password"
+                  />
                 </Field>
               </div>
               <p className="text-xs text-neutral-600 m-0">

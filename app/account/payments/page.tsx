@@ -17,6 +17,9 @@ import {
   centsToUsd,
   type PaymentsResponse,
 } from "@/lib/account";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type CardField = "last4" | "expiryMonth" | "expiryYear";
 
 function statusVariant(status: string): "success" | "warning" | "error" | "neutral" {
   const s = status.toLowerCase();
@@ -42,6 +45,15 @@ export default function PaymentsPage() {
   });
   const [cardError, setCardError] = React.useState<string | null>(null);
   const [savingCard, setSavingCard] = React.useState(false);
+  const { errors, setFieldError, validateAll } = useFieldErrors<CardField>();
+
+  const cardValidators: Record<CardField, () => string | undefined> = {
+    last4: () => (/^\d{4}$/.test(cardForm.last4) ? undefined : "Enter the last 4 digits"),
+    expiryMonth: () =>
+      cardForm.expiryMonth >= 1 && cardForm.expiryMonth <= 12 ? undefined : "Enter a valid month",
+    expiryYear: () =>
+      cardForm.expiryYear >= new Date().getFullYear() ? undefined : "Enter a valid year",
+  };
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -80,6 +92,7 @@ export default function PaymentsPage() {
 
   async function handleAddCard(e: React.FormEvent) {
     e.preventDefault();
+    if (!validateAll(cardValidators)) return;
     setSavingCard(true);
     setCardError(null);
     try {
@@ -150,31 +163,34 @@ export default function PaymentsPage() {
                   <option>Amex</option>
                 </Select>
               </Field>
-              <Field label="Last 4 digits" required>
+              <Field label="Last 4 digits" required error={errors.last4}>
                 <Input
-                  required
                   maxLength={4}
                   value={cardForm.last4}
                   onChange={(e) => setCardForm({ ...cardForm, last4: e.target.value.replace(/\D/g, "") })}
+                  onBlur={() => setFieldError("last4", cardValidators.last4())}
+                  invalid={!!errors.last4}
                 />
               </Field>
-              <Field label="Expiry month" required>
+              <Field label="Expiry month" required error={errors.expiryMonth}>
                 <Input
                   type="number"
                   min={1}
                   max={12}
-                  required
                   value={cardForm.expiryMonth}
                   onChange={(e) => setCardForm({ ...cardForm, expiryMonth: Number(e.target.value) })}
+                  onBlur={() => setFieldError("expiryMonth", cardValidators.expiryMonth())}
+                  invalid={!!errors.expiryMonth}
                 />
               </Field>
-              <Field label="Expiry year" required>
+              <Field label="Expiry year" required error={errors.expiryYear}>
                 <Input
                   type="number"
                   min={new Date().getFullYear()}
-                  required
                   value={cardForm.expiryYear}
                   onChange={(e) => setCardForm({ ...cardForm, expiryYear: Number(e.target.value) })}
+                  onBlur={() => setFieldError("expiryYear", cardValidators.expiryYear())}
+                  invalid={!!errors.expiryYear}
                 />
               </Field>
             </div>

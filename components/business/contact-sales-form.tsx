@@ -5,29 +5,37 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useFieldErrors } from "@/lib/use-field-errors";
 
 type Status = "idle" | "submitting" | "success" | "error";
+type LeadField = "companyName" | "workEmail" | "teamSize";
 
 export function ContactSalesForm() {
   const [status, setStatus] = React.useState<Status>("idle");
   const [error, setError] = React.useState<string | null>(null);
+  const [companyName, setCompanyName] = React.useState("");
+  const [workEmail, setWorkEmail] = React.useState("");
+  const [teamSize, setTeamSize] = React.useState("");
+  const [interest, setInterest] = React.useState("LOGISTICS_AND_TRAVEL");
+  const { errors, setFieldError, validateAll } = useFieldErrors<LeadField>();
+
+  const validators: Record<LeadField, () => string | undefined> = {
+    companyName: () => (companyName.trim() ? undefined : "Company name is required"),
+    workEmail: () =>
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail.trim()) ? undefined : "Enter a valid work email",
+    teamSize: () => (teamSize ? undefined : "Select a team size"),
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!validateAll(validators)) return;
     setStatus("submitting");
     setError(null);
-
-    const form = new FormData(e.currentTarget);
 
     try {
       await apiFetch("/leads", {
         method: "POST",
-        body: JSON.stringify({
-          companyName: form.get("companyName"),
-          workEmail: form.get("workEmail"),
-          teamSize: form.get("teamSize"),
-          interest: form.get("interest"),
-        }),
+        body: JSON.stringify({ companyName, workEmail, teamSize, interest }),
       });
       setStatus("success");
     } catch (err) {
@@ -60,19 +68,31 @@ export function ContactSalesForm() {
       onSubmit={onSubmit}
       className="grid sm:grid-cols-2 gap-4"
     >
-      <Field label="Company name" required>
-        <Input name="companyName" placeholder="Acme Foods Ltd" required />
-      </Field>
-      <Field label="Work email" required>
+      <Field label="Company name" required error={errors.companyName}>
         <Input
-          type="email"
-          name="workEmail"
-          placeholder="ops@acmefoods.com"
-          required
+          placeholder="Acme Foods Ltd"
+          value={companyName}
+          onChange={(e) => setCompanyName(e.target.value)}
+          onBlur={() => setFieldError("companyName", validators.companyName())}
+          invalid={!!errors.companyName}
         />
       </Field>
-      <Field label="Team size" required>
-        <Select name="teamSize" required defaultValue="">
+      <Field label="Work email" required error={errors.workEmail}>
+        <Input
+          type="email"
+          placeholder="ops@acmefoods.com"
+          value={workEmail}
+          onChange={(e) => setWorkEmail(e.target.value)}
+          onBlur={() => setFieldError("workEmail", validators.workEmail())}
+          invalid={!!errors.workEmail}
+        />
+      </Field>
+      <Field label="Team size" required error={errors.teamSize}>
+        <Select
+          value={teamSize}
+          onChange={(e) => setTeamSize(e.target.value)}
+          onBlur={() => setFieldError("teamSize", validators.teamSize())}
+        >
           <option value="" disabled>
             Select team size
           </option>
@@ -83,7 +103,7 @@ export function ContactSalesForm() {
         </Select>
       </Field>
       <Field label="Interested in" required>
-        <Select name="interest" required defaultValue="LOGISTICS_AND_TRAVEL">
+        <Select value={interest} onChange={(e) => setInterest(e.target.value)}>
           <option value="LOGISTICS_AND_TRAVEL">Logistics and travel</option>
           <option value="LOGISTICS_ONLY">Logistics only</option>
           <option value="TRAVEL_ONLY">Travel only</option>

@@ -9,6 +9,9 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Tag } from "@/components/ui/tag";
 import { ApiError } from "@/lib/api";
 import { getSupportTickets, createSupportTicket, type SupportTicketSummary } from "@/lib/account";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type TicketField = "subject" | "body";
 
 function statusVariant(status: string): "success" | "warning" | "error" | "neutral" | "info" {
   if (status === "RESOLVED" || status === "CLOSED") return status === "RESOLVED" ? "success" : "neutral";
@@ -25,6 +28,12 @@ export default function SupportPage() {
   const [form, setForm] = React.useState({ subject: "", category: "Delivery", body: "" });
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const { errors, setFieldError, validateAll } = useFieldErrors<TicketField>();
+
+  const ticketValidators: Record<TicketField, () => string | undefined> = {
+    subject: () => (form.subject.trim() ? undefined : "Subject is required"),
+    body: () => (form.body.trim() ? undefined : "Message can't be empty"),
+  };
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -43,6 +52,7 @@ export default function SupportPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!validateAll(ticketValidators)) return;
     setSaving(true);
     setFormError(null);
     try {
@@ -73,11 +83,12 @@ export default function SupportPage() {
       {showForm && (
         <form onSubmit={handleCreate} className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-4">
           {formError && <div className="text-sm text-error">{formError}</div>}
-          <Field label="Subject" required>
+          <Field label="Subject" required error={errors.subject}>
             <Input
-              required
               value={form.subject}
               onChange={(e) => setForm({ ...form, subject: e.target.value })}
+              onBlur={() => setFieldError("subject", ticketValidators.subject())}
+              invalid={!!errors.subject}
             />
           </Field>
           <Field label="Category" required>
@@ -92,11 +103,11 @@ export default function SupportPage() {
               <option>Other</option>
             </Select>
           </Field>
-          <Field label="Message" required>
+          <Field label="Message" required error={errors.body}>
             <Textarea
-              required
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
+              onBlur={() => setFieldError("body", ticketValidators.body())}
             />
           </Field>
           <div className="flex gap-2 justify-end">

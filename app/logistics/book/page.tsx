@@ -157,6 +157,7 @@ export default function LogisticsBookPage() {
   const [booking, setBooking] = React.useState(false);
   const [bookError, setBookError] = React.useState<string | null>(null);
   const [booked, setBooked] = React.useState<Delivery | null>(null);
+  const [scheduleDateTouched, setScheduleDateTouched] = React.useState(false);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -186,6 +187,7 @@ export default function LogisticsBookPage() {
   const canContinue = (() => {
     if (step === 0) return form.pickupAddress && form.pickupContact && form.pickupPhone;
     if (step === 1) return form.destinationAddress && form.destinationContact && form.destinationPhone;
+    if (step === 3) return form.speed !== "SCHEDULED" || !!form.scheduleDate;
     return true;
   })();
 
@@ -441,11 +443,17 @@ export default function LogisticsBookPage() {
                 </div>
                 {form.speed === "SCHEDULED" && (
                   <div className="grid sm:grid-cols-2 gap-4 mt-2">
-                    <Field label="Pickup date">
+                    <Field
+                      label="Pickup date"
+                      required
+                      error={scheduleDateTouched && !form.scheduleDate ? "Pickup date is required" : undefined}
+                    >
                       <Input
                         type="date"
                         value={form.scheduleDate}
                         onChange={(e) => set("scheduleDate", e.target.value)}
+                        onBlur={() => setScheduleDateTouched(true)}
+                        invalid={scheduleDateTouched && !form.scheduleDate}
                       />
                     </Field>
                     <Field label="Pickup window">

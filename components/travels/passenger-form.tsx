@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { Radio } from "@/components/ui/radio";
 import { ApiError } from "@/lib/api";
 import { createBooking, fmtUsd, SPECIAL_REQUESTS, type FlightOffer } from "@/lib/travels";
+import { useFieldErrors } from "@/lib/use-field-errors";
 
 const SAVED_PASSENGERS = [
   {
@@ -64,11 +65,32 @@ const INITIAL_STATE: FormState = {
   contactPhone: "",
 };
 
+type PassengerField =
+  | "firstName"
+  | "lastName"
+  | "dob"
+  | "passportNumber"
+  | "passportExpiry"
+  | "contactEmail"
+  | "contactPhone";
+
 export function PassengerForm({ offer }: { offer: FlightOffer }) {
   const router = useRouter();
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { errors, setFieldError, validateAll } = useFieldErrors<PassengerField>();
+
+  const validators: Record<PassengerField, () => string | undefined> = {
+    firstName: () => (form.firstName.trim() ? undefined : "First name is required"),
+    lastName: () => (form.lastName.trim() ? undefined : "Last name is required"),
+    dob: () => (form.dob ? undefined : "Date of birth is required"),
+    passportNumber: () => (form.passportNumber.trim() ? undefined : "Passport number is required"),
+    passportExpiry: () => (form.passportExpiry ? undefined : "Expiry date is required"),
+    contactEmail: () =>
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim()) ? undefined : "Enter a valid email address",
+    contactPhone: () => (form.contactPhone.trim() ? undefined : "Mobile number is required"),
+  };
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -109,6 +131,7 @@ export function PassengerForm({ offer }: { offer: FlightOffer }) {
   );
 
   async function handleSubmit() {
+    if (!validateAll(validators)) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -173,16 +196,32 @@ export function PassengerForm({ offer }: { offer: FlightOffer }) {
                 <option>Mx</option>
               </Select>
             </Field>
-            <Field label="First and middle names" required>
-              <Input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} />
+            <Field label="First and middle names" required error={errors.firstName}>
+              <Input
+                value={form.firstName}
+                onChange={(e) => set("firstName", e.target.value)}
+                onBlur={() => setFieldError("firstName", validators.firstName())}
+                invalid={!!errors.firstName}
+              />
             </Field>
-            <Field label="Last name" required>
-              <Input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
+            <Field label="Last name" required error={errors.lastName}>
+              <Input
+                value={form.lastName}
+                onChange={(e) => set("lastName", e.target.value)}
+                onBlur={() => setFieldError("lastName", validators.lastName())}
+                invalid={!!errors.lastName}
+              />
             </Field>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
-            <Field label="Date of birth" required>
-              <Input type="date" value={form.dob} onChange={(e) => set("dob", e.target.value)} />
+            <Field label="Date of birth" required error={errors.dob}>
+              <Input
+                type="date"
+                value={form.dob}
+                onChange={(e) => set("dob", e.target.value)}
+                onBlur={() => setFieldError("dob", validators.dob())}
+                invalid={!!errors.dob}
+              />
             </Field>
             <Field label="Gender · as on passport" required>
               <div className="flex border border-neutral-300 rounded-md overflow-hidden h-[38px]">
@@ -217,8 +256,13 @@ export function PassengerForm({ offer }: { offer: FlightOffer }) {
           <div className="pt-4 border-t border-divider flex flex-col gap-3.5">
             <span className="text-sm font-medium">Passport · required for international flights</span>
             <div className="grid sm:grid-cols-3 gap-4">
-              <Field label="Passport number" required>
-                <Input value={form.passportNumber} onChange={(e) => set("passportNumber", e.target.value)} />
+              <Field label="Passport number" required error={errors.passportNumber}>
+                <Input
+                  value={form.passportNumber}
+                  onChange={(e) => set("passportNumber", e.target.value)}
+                  onBlur={() => setFieldError("passportNumber", validators.passportNumber())}
+                  invalid={!!errors.passportNumber}
+                />
               </Field>
               <Field label="Issuing country" required>
                 <Select value={form.passportCountry} onChange={(e) => set("passportCountry", e.target.value)}>
@@ -227,8 +271,14 @@ export function PassengerForm({ offer }: { offer: FlightOffer }) {
                   <option>Kenya</option>
                 </Select>
               </Field>
-              <Field label="Expiry date" required>
-                <Input type="date" value={form.passportExpiry} onChange={(e) => set("passportExpiry", e.target.value)} />
+              <Field label="Expiry date" required error={errors.passportExpiry}>
+                <Input
+                  type="date"
+                  value={form.passportExpiry}
+                  onChange={(e) => set("passportExpiry", e.target.value)}
+                  onBlur={() => setFieldError("passportExpiry", validators.passportExpiry())}
+                  invalid={!!errors.passportExpiry}
+                />
               </Field>
             </div>
           </div>
@@ -254,11 +304,22 @@ export function PassengerForm({ offer }: { offer: FlightOffer }) {
         <div className="p-7 border border-divider rounded-xl bg-card flex flex-col gap-4">
           <div className="text-xl font-semibold">Contact details</div>
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Email" required>
-              <Input type="email" value={form.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} />
+            <Field label="Email" required error={errors.contactEmail}>
+              <Input
+                type="email"
+                value={form.contactEmail}
+                onChange={(e) => set("contactEmail", e.target.value)}
+                onBlur={() => setFieldError("contactEmail", validators.contactEmail())}
+                invalid={!!errors.contactEmail}
+              />
             </Field>
-            <Field label="Mobile" required>
-              <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} />
+            <Field label="Mobile" required error={errors.contactPhone}>
+              <Input
+                value={form.contactPhone}
+                onChange={(e) => set("contactPhone", e.target.value)}
+                onBlur={() => setFieldError("contactPhone", validators.contactPhone())}
+                invalid={!!errors.contactPhone}
+              />
             </Field>
           </div>
         </div>

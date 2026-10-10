@@ -8,6 +8,9 @@ import { Tag } from "@/components/ui/tag";
 import { ApiError } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace-context";
 import { getTeam, inviteMember, updateMember, type TeamMember } from "@/lib/account";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type InviteField = "email";
 
 export default function TeamPage() {
   const { activeMembership } = useWorkspace();
@@ -19,6 +22,11 @@ export default function TeamPage() {
   const [invite, setInvite] = React.useState({ email: "", costCentre: "" });
   const [inviting, setInviting] = React.useState(false);
   const [inviteError, setInviteError] = React.useState<string | null>(null);
+  const { errors, setFieldError, validateAll } = useFieldErrors<InviteField>();
+
+  const inviteValidators: Record<InviteField, () => string | undefined> = {
+    email: () => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invite.email.trim()) ? undefined : "Enter a valid email address"),
+  };
 
   const load = React.useCallback(() => {
     if (!workspaceId) return;
@@ -39,6 +47,7 @@ export default function TeamPage() {
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     if (!workspaceId) return;
+    if (!validateAll(inviteValidators)) return;
     setInviting(true);
     setInviteError(null);
     try {
@@ -85,12 +94,13 @@ export default function TeamPage() {
         <form onSubmit={handleInvite} className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-4">
           {inviteError && <div className="text-sm text-error">{inviteError}</div>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Email" required>
+            <Field label="Email" required error={errors.email}>
               <Input
                 type="email"
-                required
                 value={invite.email}
                 onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+                onBlur={() => setFieldError("email", inviteValidators.email())}
+                invalid={!!errors.email}
               />
             </Field>
             <Field label="Cost centre" optional>

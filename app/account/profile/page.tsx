@@ -7,6 +7,9 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { SectionKicker } from "@/components/ui/section-kicker";
 import { ApiError } from "@/lib/api";
 import { getProfile, updateProfile, revokeSession, type ProfileResponse } from "@/lib/account";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type ProfileField = "firstName" | "lastName";
 
 export default function ProfilePage() {
   const [profile, setProfile] = React.useState<ProfileResponse | null>(null);
@@ -22,6 +25,12 @@ export default function ProfilePage() {
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [saved, setSaved] = React.useState(false);
+  const { errors, setFieldError, validateAll } = useFieldErrors<ProfileField>();
+
+  const validators: Record<ProfileField, () => string | undefined> = {
+    firstName: () => (form.firstName.trim() ? undefined : "First name is required"),
+    lastName: () => (form.lastName.trim() ? undefined : "Last name is required"),
+  };
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -49,6 +58,7 @@ export default function ProfilePage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!validateAll(validators)) return;
     setSaving(true);
     setSaveError(null);
     setSaved(false);
@@ -82,18 +92,20 @@ export default function ProfilePage() {
         {saveError && <div className="text-sm text-error">{saveError}</div>}
         {saved && <div className="text-sm text-success">Profile updated.</div>}
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="First name" required>
+          <Field label="First name" required error={errors.firstName}>
             <Input
-              required
               value={form.firstName}
               onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              onBlur={() => setFieldError("firstName", validators.firstName())}
+              invalid={!!errors.firstName}
             />
           </Field>
-          <Field label="Last name" required>
+          <Field label="Last name" required error={errors.lastName}>
             <Input
-              required
               value={form.lastName}
               onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              onBlur={() => setFieldError("lastName", validators.lastName())}
+              invalid={!!errors.lastName}
             />
           </Field>
         </div>

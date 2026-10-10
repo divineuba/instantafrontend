@@ -8,6 +8,9 @@ import { Field, Input } from "@/components/ui/field";
 import { ApiError } from "@/lib/api";
 import { registerAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
+import { useFieldErrors } from "@/lib/use-field-errors";
+
+type RegisterField = "firstName" | "lastName" | "email" | "password";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -19,13 +22,22 @@ export function RegisterForm() {
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { errors, setFieldError, validateAll } = useFieldErrors<RegisterField>();
 
   const canSubmit = Boolean(
     firstName && lastName && email && password.length >= 8,
   );
 
+  const validators: Record<RegisterField, () => string | undefined> = {
+    firstName: () => (firstName.trim() ? undefined : "First name is required"),
+    lastName: () => (lastName.trim() ? undefined : "Last name is required"),
+    email: () => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? undefined : "Enter a valid email address"),
+    password: () => (password.length >= 8 ? undefined : "Password must be at least 8 characters"),
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!validateAll(validators)) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -61,33 +73,36 @@ export function RegisterForm() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="First name" required htmlFor="firstName">
+        <Field label="First name" required htmlFor="firstName" error={errors.firstName}>
           <Input
             id="firstName"
             autoComplete="given-name"
-            required
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
+            onBlur={() => setFieldError("firstName", validators.firstName())}
+            invalid={!!errors.firstName}
           />
         </Field>
-        <Field label="Last name" required htmlFor="lastName">
+        <Field label="Last name" required htmlFor="lastName" error={errors.lastName}>
           <Input
             id="lastName"
             autoComplete="family-name"
-            required
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
+            onBlur={() => setFieldError("lastName", validators.lastName())}
+            invalid={!!errors.lastName}
           />
         </Field>
       </div>
-      <Field label="Email" required htmlFor="email">
+      <Field label="Email" required htmlFor="email" error={errors.email}>
         <Input
           id="email"
           type="email"
           autoComplete="email"
-          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => setFieldError("email", validators.email())}
+          invalid={!!errors.email}
         />
       </Field>
       <Field
@@ -95,15 +110,16 @@ export function RegisterForm() {
         required
         htmlFor="password"
         hint="At least 8 characters"
+        error={errors.password}
       >
         <Input
           id="password"
           type="password"
           autoComplete="new-password"
-          required
-          minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => setFieldError("password", validators.password())}
+          invalid={!!errors.password}
         />
       </Field>
 
