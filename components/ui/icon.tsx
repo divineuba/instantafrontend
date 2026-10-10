@@ -56,6 +56,7 @@ import {
   Eye,
   EyeOff,
   Tag,
+  Trash2,
   type LucideProps,
 } from "lucide-react";
 
@@ -121,6 +122,7 @@ export const iconMap = {
   eye: Eye,
   "eye-off": EyeOff,
   tag: Tag,
+  trash: Trash2,
 } as const;
 
 export type IconName = keyof typeof iconMap;

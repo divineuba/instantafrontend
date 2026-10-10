@@ -181,6 +181,18 @@ export function addCard(input: {
   });
 }
 
+export function deleteCard(id: string) {
+  return apiFetch<{ ok: true }>(`/account/payments/methods/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function setDefaultCard(id: string) {
+  return apiFetch<PaymentMethodCard>(`/account/payments/methods/${encodeURIComponent(id)}/default`, {
+    method: "PATCH",
+  });
+}
+
 // ---- Profile --------------------------------------------------------------
 
 export interface ProfileResponse {

@@ -11,6 +11,7 @@ import { SectionKicker } from "@/components/ui/section-kicker";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import {
@@ -18,6 +19,8 @@ import {
   topUpWallet,
   withdrawWallet,
   addCard,
+  deleteCard,
+  setDefaultCard,
   centsToUsd,
   type PaymentsResponse,
 } from "@/lib/account";
@@ -49,6 +52,8 @@ export default function PaymentsPage() {
   });
   const [cardError, setCardError] = React.useState<string | null>(null);
   const [savingCard, setSavingCard] = React.useState(false);
+  const [cardActionId, setCardActionId] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; label: string } | null>(null);
   const { errors, setFieldError, validateAll } = useFieldErrors<CardField>();
   const toast = useToast();
 
@@ -111,6 +116,35 @@ export default function PaymentsPage() {
       setCardError(err instanceof ApiError ? err.message : "Couldn't add card.");
     } finally {
       setSavingCard(false);
+    }
+  }
+
+  async function handleSetDefault(id: string) {
+    setCardActionId(id);
+    try {
+      await setDefaultCard(id);
+      load();
+      toast("Default card updated.", "success");
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "Couldn't update default card.", "error");
+    } finally {
+      setCardActionId(null);
+    }
+  }
+
+  async function handleDeleteCard() {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
+    setCardActionId(id);
+    try {
+      await deleteCard(id);
+      setDeleteTarget(null);
+      load();
+      toast("Card removed.", "success");
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "Couldn't remove card.", "error");
+    } finally {
+      setCardActionId(null);
     }
   }
 
@@ -240,7 +274,24 @@ export default function PaymentsPage() {
                     Expires {String(m.expiryMonth).padStart(2, "0")}/{m.expiryYear}
                   </span>
                 </span>
-                {m.isDefault && <Tag variant="accent">Default</Tag>}
+                {m.isDefault ? (
+                  <Tag variant="accent">Default</Tag>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    disabled={cardActionId === m.id}
+                    onClick={() => handleSetDefault(m.id)}
+                  >
+                    {cardActionId === m.id ? "Saving…" : "Make default"}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  disabled={cardActionId === m.id}
+                  onClick={() => setDeleteTarget({ id: m.id, label: `${m.brand} •••• ${m.last4}` })}
+                >
+                  <Icon name="trash" size={14} />
+                </Button>
               </div>
             ))}
           </div>
@@ -281,6 +332,25 @@ export default function PaymentsPage() {
           </Table>
         )}
       </div>
+
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}>
+        <ModalHeader title="Remove card" onClose={() => setDeleteTarget(null)} />
+        <ModalBody>
+          Remove {deleteTarget?.label} from your account? This can&apos;t be undone.
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            disabled={cardActionId === deleteTarget?.id}
+            onClick={handleDeleteCard}
+          >
+            {cardActionId === deleteTarget?.id ? "Removing…" : "Remove card"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
