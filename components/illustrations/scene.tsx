@@ -1,4 +1,4 @@
-type SceneVariant = "network" | "delivery" | "travel" | "growth" | "auth";
+type SceneVariant = "network" | "delivery" | "travel" | "growth" | "auth" | "horizon";
 
 const SCENE_BG: Record<SceneVariant, string> = {
   network: "linear-gradient(135deg, #f5eff4 0%, #ffffff 60%)",
@@ -6,6 +6,7 @@ const SCENE_BG: Record<SceneVariant, string> = {
   travel: "linear-gradient(160deg, #3d2837 0%, #604058 55%, #714b67 100%)",
   growth: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 60%)",
   auth: "linear-gradient(150deg, #241a21 0%, #4a2f3f 48%, #714b67 100%)",
+  horizon: "linear-gradient(145deg, #eef6f5 0%, #f6eff4 55%, #ffffff 100%)",
 };
 
 function DotGrid({ light }: { light?: boolean }) {
@@ -196,12 +197,45 @@ function AuthArt() {
   );
 }
 
+function HorizonArt() {
+  return (
+    <svg viewBox="0 0 400 300" className="absolute inset-0 w-full h-full" fill="none">
+      {/* many paths radiating out from the group mark, toward live and future nodes */}
+      <path d="M200 150 C 160 140, 110 128, 54 100" stroke="#99c9c9" strokeWidth="3" strokeDasharray="2 10" strokeLinecap="round" />
+      <path d="M200 150 C 240 128, 290 100, 338 58" stroke="#d4bccd" strokeWidth="3" strokeDasharray="2 10" strokeLinecap="round" />
+      <path d="M200 150 C 182 188, 158 222, 118 248" stroke="#c7ddd9" strokeWidth="2.5" strokeDasharray="2 10" strokeLinecap="round" />
+      <path d="M200 150 C 228 182, 262 210, 308 228" stroke="#e3d3de" strokeWidth="2.5" strokeDasharray="2 10" strokeLinecap="round" />
+
+      {/* future-business ghost nodes at the ends of the thinner paths */}
+      <circle cx="104" cy="252" r="5" fill="none" stroke="#b9a7b4" strokeWidth="2" />
+      <path d="M104 248 v8 M100 252 h8" stroke="#b9a7b4" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="322" cy="234" r="5" fill="none" stroke="#9cc9c8" strokeWidth="2" />
+      <path d="M322 230 v8 M318 234 h8" stroke="#9cc9c8" strokeWidth="2" strokeLinecap="round" />
+
+      {/* logistics node */}
+      <circle cx="42" cy="92" r="24" fill="#e6f5f5" />
+      <TruckGlyph x={24} y={81} scale={0.65} color="#017e84" />
+      {/* travels node */}
+      <circle cx="352" cy="50" r="24" fill="#f5eff4" />
+      <g transform="translate(337,37)">
+        <PlaneGlyph x={0} y={0} scale={0.4} rotate={-18} color="#714b67" />
+      </g>
+
+      {/* the group mark, at the centre every path moves out from */}
+      <circle cx="200" cy="150" r="34" fill="#ffffff" stroke="#714b67" strokeWidth="2.5" />
+      <circle cx="200" cy="150" r="21" fill="#714b67" fillOpacity="0.08" />
+      <path d="M188 150 h24 M200 138 v24" stroke="#714b67" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const SCENE_ART: Record<SceneVariant, () => React.JSX.Element> = {
   network: NetworkArt,
   delivery: DeliveryArt,
   travel: TravelArt,
   growth: GrowthArt,
   auth: AuthArt,
+  horizon: HorizonArt,
 };
 
 export function Scene({

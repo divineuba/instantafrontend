@@ -7,6 +7,9 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { ServiceSelector } from "@/components/home/service-selector";
 import { SectionKicker } from "@/components/ui/section-kicker";
 import { businesses } from "@/lib/businesses.config";
+import { FadeInWhenVisible } from "@/components/motion/fade-in-when-visible";
+
+const CITIES = ["Lagos", "Abuja", "Accra", "Nairobi"];
 
 const WHY: { n: string; icon: IconName; title: string; body: string }[] = [
   {
@@ -70,7 +73,7 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero */}
         <section className="ins-container pt-16 grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] gap-14 items-end">
-          <div className="flex flex-col gap-6 pb-2">
+          <FadeInWhenVisible className="flex flex-col gap-6 pb-2" y={16}>
             <div className="flex gap-2 flex-wrap">
               <Tag variant="outline">Instanta Group</Tag>
               <Tag variant="neutral">Logistics</Tag>
@@ -99,20 +102,22 @@ export default function Home() {
                 Get started
               </LinkButton>
             </div>
-          </div>
-          <figure className="relative aspect-[5/4] rounded-lg overflow-hidden border border-divider">
-            <Scene variant="network" className="absolute inset-0" />
-          </figure>
+          </FadeInWhenVisible>
+          <FadeInWhenVisible delay={0.1} y={16}>
+            <figure className="relative aspect-[5/4] rounded-lg overflow-hidden border border-divider">
+              <Scene variant="horizon" className="absolute inset-0" />
+            </figure>
+          </FadeInWhenVisible>
         </section>
 
         {/* Service selector */}
-        <section className="ins-container mt-12">
+        <FadeInWhenVisible className="ins-container mt-12">
           <ServiceSelector />
-        </section>
+        </FadeInWhenVisible>
 
         {/* Our businesses */}
         <section id="services" className="ins-container pt-28">
-          <div className="flex justify-between items-end mb-8 gap-6 flex-wrap">
+          <FadeInWhenVisible className="flex justify-between items-end mb-8 gap-6 flex-wrap">
             <div>
               <SectionKicker>01 Our businesses</SectionKicker>
               <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-xl">
@@ -122,53 +127,55 @@ export default function Home() {
             <LinkButton href="/services" variant="ghost">
               See every service <Icon name="arrow" size={14} />
             </LinkButton>
-          </div>
+          </FadeInWhenVisible>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {businesses.map((b) => (
-              <article
-                key={b.id}
-                className="rounded-lg border border-divider bg-card overflow-hidden flex flex-col"
-              >
-                <div className="aspect-[16/7] border-b border-divider relative">
-                  <Scene
-                    variant={b.id === "logistics" ? "delivery" : "travel"}
-                    className="absolute inset-0"
-                  />
-                </div>
-                <div className="p-7 flex flex-col gap-4 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold">
-                      <Icon name={b.icon} size={18} /> {b.name}
-                    </span>
+            {businesses.map((b, bi) => (
+              <FadeInWhenVisible key={b.id} delay={bi * 0.08}>
+                <article className="rounded-lg border border-divider bg-card overflow-hidden flex flex-col">
+                  <div className="aspect-[16/7] border-b border-divider relative">
+                    <Scene
+                      variant={b.id === "logistics" ? "delivery" : "travel"}
+                      className="absolute inset-0"
+                    />
                   </div>
-                  <h3 className="text-[32px] leading-[1.05]">{b.tagline}</h3>
-                  <p className="text-[15px] text-neutral-700 max-w-md">
-                    {b.id === "logistics"
-                      ? "Reliable delivery and logistics services designed for individuals and businesses."
-                      : "Flight booking and travel services designed to make every trip easier."}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {b.megaItems.slice(0, 4).map((m) => (
-                      <Tag key={m.label} variant="accent">
-                        {m.label}
-                      </Tag>
-                    ))}
+                  <div className="p-7 flex flex-col gap-4 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold">
+                        <Icon name={b.icon} size={18} /> {b.name}
+                      </span>
+                    </div>
+                    <h3 className="text-[32px] leading-[1.05]">{b.tagline}</h3>
+                    <p className="text-[15px] text-neutral-700 max-w-md">
+                      {b.id === "logistics"
+                        ? "Reliable delivery and logistics services designed for individuals and businesses."
+                        : "Flight booking and travel services designed to make every trip easier."}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {b.megaItems.slice(0, 4).map((m) => (
+                        <Tag key={m.label} variant="accent">
+                          {m.label}
+                        </Tag>
+                      ))}
+                    </div>
+                    <div className="flex gap-2.5 mt-2">
+                      <LinkButton href={b.cta.href} variant="primary">
+                        {b.cta.label}
+                      </LinkButton>
+                      <LinkButton href={b.href} variant="secondary">
+                        Explore {b.name.toLowerCase()}
+                      </LinkButton>
+                    </div>
                   </div>
-                  <div className="flex gap-2.5 mt-2">
-                    <LinkButton href={b.cta.href} variant="primary">
-                      {b.cta.label}
-                    </LinkButton>
-                    <LinkButton href={b.href} variant="secondary">
-                      Explore {b.name.toLowerCase()}
-                    </LinkButton>
-                  </div>
-                </div>
-              </article>
+                </article>
+              </FadeInWhenVisible>
             ))}
           </div>
 
-          <div className="mt-6 border border-dashed border-divider rounded-xl px-7 py-5 flex items-center gap-7 flex-wrap">
+          <FadeInWhenVisible
+            className="mt-6 border border-dashed border-divider rounded-xl px-7 py-5 flex items-center gap-7 flex-wrap"
+            delay={0.15}
+          >
             <span className="font-semibold text-lg">Next on the platform</span>
             <div className="flex gap-6 flex-wrap mr-auto text-sm text-neutral-700">
               {FUTURE.map((f) => (
@@ -178,29 +185,48 @@ export default function Home() {
               ))}
             </div>
             <Tag variant="neutral">Coming soon</Tag>
+          </FadeInWhenVisible>
+
+          <div className="mt-10 flex items-center gap-3 text-sm text-neutral-600">
+            <Icon name="pin" size={15} className="text-accent shrink-0" />
+            <span>
+              Already live in{" "}
+              {CITIES.map((c, i) => (
+                <span key={c}>
+                  <span className="font-medium text-neutral-800">{c}</span>
+                  {i < CITIES.length - 1 ? ", " : ""}
+                </span>
+              ))}
+              {" "}— with more cities on the way as each business expands.
+            </span>
           </div>
         </section>
 
         {/* Why Instanta */}
         <section className="ins-container pt-28">
-          <SectionKicker>02 Why Instanta</SectionKicker>
-          <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-2xl mb-8">
-            Every service, one standard.
-          </h2>
+          <FadeInWhenVisible>
+            <SectionKicker>02 Why Instanta</SectionKicker>
+            <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-2xl mb-8">
+              Every service, one standard.
+            </h2>
+          </FadeInWhenVisible>
           <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
-            {WHY.map((w) => (
-              <div key={w.n} className="flex flex-col gap-3">
+            {WHY.map((w, wi) => (
+              <FadeInWhenVisible key={w.n} delay={wi * 0.06} className="flex flex-col gap-3 relative">
+                <span className="font-script text-[44px] leading-none text-neutral-200 absolute -top-3 right-0 select-none pointer-events-none">
+                  {w.n}
+                </span>
                 <Icon name={w.icon} size={28} className="text-accent" />
                 <div className="text-xl font-semibold">{w.title}</div>
                 <p className="text-sm text-neutral-700 m-0">{w.body}</p>
-              </div>
+              </FadeInWhenVisible>
             ))}
           </div>
         </section>
 
         {/* Metrics */}
         <section className="ins-container pt-28">
-          <div className="rounded-lg border border-divider overflow-hidden grid sm:grid-cols-2 lg:grid-cols-[280px_repeat(4,minmax(0,1fr))]">
+          <FadeInWhenVisible className="rounded-lg border border-divider overflow-hidden grid sm:grid-cols-2 lg:grid-cols-[280px_repeat(4,minmax(0,1fr))]">
             <div className="p-7 border-b sm:border-b-0 sm:border-r border-divider flex flex-col justify-between gap-5">
               <SectionKicker>03 In numbers</SectionKicker>
               <Tag variant="neutral" className="self-start">
@@ -220,12 +246,12 @@ export default function Home() {
                 <div className="text-sm text-neutral-700">{m.l}</div>
               </div>
             ))}
-          </div>
+          </FadeInWhenVisible>
         </section>
 
         {/* For Business */}
         <section className="ins-container pt-28 pb-28">
-          <div className="rounded-xl bg-accent-900 text-white grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-12 p-6 sm:p-10 lg:p-12">
+          <FadeInWhenVisible className="rounded-xl bg-accent-900 text-white grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-12 p-6 sm:p-10 lg:p-12">
             <div className="flex flex-col gap-4">
               <div className="text-[11px] tracking-[.14em] uppercase text-accent-300 font-semibold">
                 04 Instanta for Business
@@ -260,7 +286,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          </div>
+          </FadeInWhenVisible>
         </section>
       </main>
       <Footer />

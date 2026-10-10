@@ -6,6 +6,7 @@ import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { SectionKicker } from "@/components/ui/section-kicker";
 import { ContactSalesForm } from "@/components/business/contact-sales-form";
+import { FadeInWhenVisible } from "@/components/motion/fade-in-when-visible";
 
 const SOLUTIONS: { icon: IconName; title: string; body: string }[] = [
   { icon: "truck", title: "Corporate logistics", body: "Dedicated riders, scheduled routes and delivery SLAs." },
@@ -28,7 +29,7 @@ export default function BusinessPage() {
       <main className="flex-1">
         {/* Hero */}
         <section className="ins-container pt-16 grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-14 items-center">
-          <div className="flex flex-col gap-5">
+          <FadeInWhenVisible className="flex flex-col gap-5" y={16}>
             <Tag variant="outline" className="self-start">
               Instanta for Business
             </Tag>
@@ -48,38 +49,52 @@ export default function BusinessPage() {
                 Talk to sales
               </LinkButton>
             </div>
-          </div>
-          <figure className="relative aspect-[4/3] rounded-lg overflow-hidden border border-divider">
-            <Scene variant="growth" className="absolute inset-0" />
-          </figure>
+          </FadeInWhenVisible>
+          <FadeInWhenVisible delay={0.1} y={16}>
+            <figure className="relative aspect-[4/3] rounded-lg overflow-hidden border border-divider">
+              <Scene variant="growth" className="absolute inset-0" />
+            </figure>
+          </FadeInWhenVisible>
         </section>
 
         {/* Solutions */}
         <section className="ins-container pt-24">
-          <SectionKicker>Solutions</SectionKicker>
-          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
-            {SOLUTIONS.map((o) => (
-              <div key={o.title} className="flex flex-col gap-3">
-                <Icon name={o.icon} size={28} className="text-accent" />
-                <div className="text-xl font-semibold">{o.title}</div>
+          <FadeInWhenVisible>
+            <SectionKicker>Solutions</SectionKicker>
+            <h2 className="text-[clamp(28px,3.2vw,40px)] leading-tight max-w-xl mb-8">
+              A dedicated solution for every part of the business.
+            </h2>
+          </FadeInWhenVisible>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            {SOLUTIONS.map((o, oi) => (
+              <FadeInWhenVisible
+                key={o.title}
+                delay={oi * 0.06}
+                className="flex flex-col gap-3 rounded-lg border border-divider bg-card p-5"
+              >
+                <span className="flex items-center justify-center size-10 rounded-md bg-accent-100 text-accent-800">
+                  <Icon name={o.icon} size={20} />
+                </span>
+                <div className="text-base font-semibold">{o.title}</div>
                 <p className="text-sm text-neutral-700 m-0">{o.body}</p>
-              </div>
+              </FadeInWhenVisible>
             ))}
           </div>
         </section>
 
         {/* Live in a day */}
         <section className="ins-container pt-24 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-14">
-          <div>
+          <FadeInWhenVisible>
             <SectionKicker>How it works</SectionKicker>
             <h2 className="text-[clamp(28px,3.2vw,44px)] leading-tight">
               Live in a day.
             </h2>
-          </div>
+          </FadeInWhenVisible>
           <div className="flex flex-col">
-            {STEPS.map((s) => (
-              <div
+            {STEPS.map((s, si) => (
+              <FadeInWhenVisible
                 key={s.n}
+                delay={si * 0.08}
                 className="grid grid-cols-[56px_minmax(0,1fr)] sm:grid-cols-[72px_minmax(0,1fr)] gap-5 py-5 border-t border-divider"
               >
                 <span className="text-[32px] sm:text-[40px] font-semibold text-accent leading-none">
@@ -89,14 +104,14 @@ export default function BusinessPage() {
                   <div className="text-xl font-semibold">{s.title}</div>
                   <p className="text-sm text-neutral-700 mt-1 mb-0">{s.body}</p>
                 </div>
-              </div>
+              </FadeInWhenVisible>
             ))}
           </div>
         </section>
 
         {/* Contact sales */}
         <section id="contact" className="ins-container pt-24 pb-24">
-          <div className="rounded-lg border border-divider bg-card p-8 lg:p-10 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-10">
+          <FadeInWhenVisible className="rounded-lg border border-divider bg-card p-8 lg:p-10 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-10">
             <div>
               <h2 className="text-[clamp(26px,2.8vw,36px)] leading-tight mb-2">
                 Talk to our business team
@@ -107,7 +122,7 @@ export default function BusinessPage() {
               </p>
             </div>
             <ContactSalesForm />
-          </div>
+          </FadeInWhenVisible>
         </section>
       </main>
       <Footer />
