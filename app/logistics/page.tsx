@@ -14,7 +14,7 @@ import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/table";
 import {
   SPEEDS,
   LOGISTICS_SERVICES,
-  MOCK_DISTANCE_KM,
+  distanceProvider,
   fmtUsd,
   quoteDelivery,
   type WeightBandKey,
@@ -40,14 +40,19 @@ function QuickQuote() {
   const [total, setTotal] = React.useState(6.5);
   const [loading, setLoading] = React.useState(false);
 
+  const distanceKm = React.useMemo(
+    () => distanceProvider.estimateKm(pickup, dropoff),
+    [pickup, dropoff],
+  );
+
   React.useEffect(() => {
     let cancelled = false;
-    // Kicking off a server fetch when `size` changes and flagging it as
-    // in-flight is a genuine sync-with-external-system effect, not derivable
-    // render-time state.
+    // Kicking off a server fetch when `size`/addresses change and flagging it
+    // as in-flight is a genuine sync-with-external-system effect, not
+    // derivable render-time state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    quoteDelivery({ speed: "STANDARD", distanceKm: MOCK_DISTANCE_KM, weightBand: size })
+    quoteDelivery({ speed: "STANDARD", distanceKm, weightBand: size })
       .then((q) => {
         if (!cancelled) setTotal(q.total);
       })
@@ -60,7 +65,7 @@ function QuickQuote() {
     return () => {
       cancelled = true;
     };
-  }, [size]);
+  }, [size, distanceKm]);
 
   return (
     <div className="p-6 flex flex-col gap-3.5 bg-card border border-divider rounded-xl shadow-md">
@@ -91,7 +96,7 @@ function QuickQuote() {
           </div>
         </div>
         <div className="text-[13px] text-neutral-700 text-right">
-          {MOCK_DISTANCE_KM} km · Standard
+          {distanceKm} km · Standard
           <br />
           Arrives today by 18:00
         </div>

@@ -10,7 +10,7 @@ import { ApiError } from "@/lib/api";
 import {
   SPEEDS,
   WEIGHT_BANDS,
-  MOCK_DISTANCE_KM,
+  distanceProvider,
   fmtUsd,
   quoteDelivery,
   createDelivery,
@@ -116,22 +116,30 @@ function StepBar({ step, onGo }: { step: number; onGo: (i: number) => void }) {
 function PriceSidebar({
   quote,
   loading,
+  pickupAddress,
+  destinationAddress,
+  distanceKm,
 }: {
   quote: QuoteResponse | null;
   loading: boolean;
+  pickupAddress: string;
+  destinationAddress: string;
+  distanceKm: number;
 }) {
+  const pickupLabel = distanceProvider.resolveLabel(pickupAddress) ?? pickupAddress;
+  const destinationLabel = distanceProvider.resolveLabel(destinationAddress) ?? destinationAddress;
   return (
     <aside className="p-6 rounded-xl border border-divider bg-card sticky top-6 flex flex-col gap-3.5">
       <div className="text-xl font-semibold">Price estimate</div>
       <div className="flex flex-col gap-0.5 text-sm py-3 border-t border-b border-divider">
         <div className="flex gap-2.5 items-center">
           <Icon name="pin" size={14} className="text-accent" />
-          Lekki Phase 1
+          <span className="truncate">{pickupLabel}</span>
         </div>
         <div className="w-px h-3.5 bg-divider ml-[6px]" />
         <div className="flex gap-2.5 items-center">
           <Icon name="pin" size={14} className="text-accent-800" />
-          Ikoyi · {MOCK_DISTANCE_KM} km
+          <span className="truncate">{destinationLabel} · {distanceKm} km</span>
         </div>
       </div>
       {quote?.breakdown.map((l) => (
@@ -168,16 +176,21 @@ export default function LogisticsBookPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  const distanceKm = React.useMemo(
+    () => distanceProvider.estimateKm(form.pickupAddress, form.destinationAddress),
+    [form.pickupAddress, form.destinationAddress],
+  );
+
   React.useEffect(() => {
     let cancelled = false;
-    // Re-quoting from the server whenever speed/weight/insurance changes and
-    // flagging it as in-flight is a genuine sync-with-external-system
-    // effect, not derivable render-time state.
+    // Re-quoting from the server whenever speed/weight/insurance/addresses
+    // change and flagging it as in-flight is a genuine
+    // sync-with-external-system effect, not derivable render-time state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuoteLoading(true);
     quoteDelivery({
       speed: form.speed,
-      distanceKm: MOCK_DISTANCE_KM,
+      distanceKm,
       weightBand: form.weightBand,
       insured: form.insured,
     })
@@ -187,7 +200,7 @@ export default function LogisticsBookPage() {
     return () => {
       cancelled = true;
     };
-  }, [form.speed, form.weightBand, form.insured]);
+  }, [form.speed, form.weightBand, form.insured, distanceKm]);
 
   const canContinue = (() => {
     if (step === 0) return form.pickupAddress && form.pickupContact && form.pickupPhone;
@@ -206,7 +219,7 @@ export default function LogisticsBookPage() {
     try {
       const delivery = await createDelivery({
         speed: form.speed,
-        distanceKm: MOCK_DISTANCE_KM,
+        distanceKm,
         weightBand: form.weightBand,
         insured: form.insured,
         pickupAddress: form.pickupAddress,
@@ -539,7 +552,13 @@ export default function LogisticsBookPage() {
             </div>
           </div>
 
-          <PriceSidebar quote={quote} loading={quoteLoading} />
+          <PriceSidebar
+            quote={quote}
+            loading={quoteLoading}
+            pickupAddress={form.pickupAddress}
+            destinationAddress={form.destinationAddress}
+            distanceKm={distanceKm}
+          />
         </div>
       </main>
       <Footer />
