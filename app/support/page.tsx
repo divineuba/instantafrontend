@@ -38,7 +38,7 @@ const QUICK_LINKS: { icon: IconName; title: string; body: string; href: string }
 const FAQS = [
   {
     q: "Where's my delivery?",
-    a: "Use your tracking ID on the track page to see live status picked up, in transit, out for delivery or delivered.",
+    a: "Use your tracking ID on the track page to see live status — picked up, in transit, out for delivery or delivered.",
   },
   {
     q: "How do I change or cancel a flight booking?",
@@ -50,11 +50,11 @@ const FAQS = [
   },
   {
     q: "I was charged twice, or the wrong amount.",
-    a: "Tell us the date and amount in the message below, we'll check your payment history and refund any error.",
+    a: "Tell us the date and amount in the message below — we'll check your payment history and refund any error.",
   },
   {
     q: "Do you support business accounts?",
-    a: "Yes see Instanta for Business for team workspaces, approvals and consolidated billing.",
+    a: "Yes — see Instanta for Business for team workspaces, approvals and consolidated billing.",
   },
 ];
 
@@ -119,7 +119,7 @@ export default function SupportPage() {
               How can we help?
             </h1>
             <p className="text-lg text-neutral-700 max-w-lg mt-3">
-              Track a delivery, check a trip, or send us a message no
+              Track a delivery, check a trip, or send us a message &mdash; no
               account needed.
             </p>
             <LinkButton
@@ -202,7 +202,7 @@ export default function SupportPage() {
                   Still need a hand?
                 </h2>
                 <p className="text-sm text-neutral-700 m-0">
-                  Send us the details order or tracking ID helps and we
+                  Send us the details &mdash; order or tracking ID helps &mdash; and we
                   reply within one business day.
                 </p>
               </div>

@@ -84,7 +84,7 @@ export function ContactForm({
         </span>
         <div className="text-xl font-semibold">Message sent.</div>
         <p className="text-sm text-neutral-700 max-w-sm m-0">
-          We&apos;ve got it our team replies within one business day, by email.
+          We&apos;ve got it &mdash; our team replies within one business day, by email.
         </p>
       </div>
     );

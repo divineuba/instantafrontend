@@ -48,7 +48,7 @@ export default function ContactPage() {
             </h1>
             <p className="text-lg text-neutral-700 max-w-lg mt-3">
               Questions about an order, a business account, or something
-              else entirely tell us below and we&apos;ll route it to the
+              else entirely &mdash; tell us below and we&apos;ll route it to the
               right team.
             </p>
           </FadeInWhenVisible>
