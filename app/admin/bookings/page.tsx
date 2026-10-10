@@ -69,7 +69,7 @@ export default function AdminBookingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Flight bookings</h1>
-          <p className="text-sm text-neutral-600 mt-1">Travel operations — tickets, refunds, routes and documents.</p>
+          <p className="text-sm text-neutral-600 mt-1">Travel operations tickets, refunds, routes and documents.</p>
         </div>
         <Segmented
           name="bookings-tab"

@@ -68,7 +68,7 @@ export default function AdminDeliveriesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Deliveries</h1>
-          <p className="text-sm text-neutral-600 mt-1">Logistics operations — orders, fleet, zones and disputes.</p>
+          <p className="text-sm text-neutral-600 mt-1">Logistics operations orders, fleet, zones and disputes.</p>
         </div>
         <Segmented
           name="deliveries-tab"

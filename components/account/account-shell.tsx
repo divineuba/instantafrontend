@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -85,12 +86,20 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
           href="/"
           className="flex items-center gap-2.5 text-text no-underline w-auto md:w-[216px]"
         >
-          <span className="relative w-[22px] h-[22px] rounded-[7px] bg-accent block">
-            <span className="absolute right-[22%] top-[22%] w-[30%] h-[30%] rounded-full bg-warm" />
-          </span>
-          <span className="font-semibold text-[17px] tracking-[.14em] hidden sm:inline">
-            INSTANTA
-          </span>
+          <Image
+            src="/brand/mark.svg"
+            alt="Instanta"
+            width={22}
+            height={22}
+            className="w-[22px] h-[22px] sm:hidden"
+          />
+          <Image
+            src="/brand/logo-96h.png"
+            alt="Instanta"
+            width={160}
+            height={48}
+            className="h-12 w-auto hidden sm:block"
+          />
           <span className="text-[17px] tracking-[.14em] text-accent-700 hidden sm:inline">
             ACCOUNT
           </span>

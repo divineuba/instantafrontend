@@ -46,7 +46,7 @@ export interface ComingSoonBusiness {
  * Single source of truth for every business vertical on the platform.
  * Drives the header mega menu, the vertical sub-nav row, the footer
  * columns, and (later) the services directory and admin business
- * switcher — adding a business is a data change here, not a redesign.
+ * switcher adding a business is a data change here, not a redesign.
  */
 export const businesses: Business[] = [
   {

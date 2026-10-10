@@ -121,7 +121,7 @@ export default function ServicesPage() {
             </span>
             <input
               className="w-full h-[42px] pl-9 pr-3 text-sm bg-white border border-neutral-300 rounded-md outline-none focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]"
-              placeholder="Search services — e.g. same-day, visa, bulk"
+              placeholder="Search services e.g. same-day, visa, bulk"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

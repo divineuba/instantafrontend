@@ -7,7 +7,7 @@ import { getMe, logout as apiLogout, type AuthUser } from "@/lib/auth";
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  /** Re-fetch /auth/me — call after login/register/profile updates. */
+  /** Re-fetch /auth/me call after login/register/profile updates. */
   refresh: () => Promise<void>;
   /** Optimistically set the user (e.g. right after login/register). */
   setUser: (user: AuthUser | null) => void;

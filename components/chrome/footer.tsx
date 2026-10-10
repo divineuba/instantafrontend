@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { businesses } from "@/lib/businesses.config";
 
@@ -29,58 +30,74 @@ export function Footer() {
   ];
 
   return (
-    <footer className="mt-24 bg-footer-bg text-white">
-      <div className="ins-container pt-16 pb-12">
-        <Link
-          href="/"
-          className="flex items-center justify-center gap-2.5 text-white no-underline mb-12"
-        >
-          <span className="relative w-7 h-7 rounded-[8px] bg-accent block">
-            <span className="absolute right-[22%] top-[22%] w-[30%] h-[30%] rounded-full bg-warm" />
-          </span>
-          <span className="font-semibold text-2xl tracking-[.14em] text-white">
-            INSTANTA
-          </span>
-        </Link>
+    <footer className="relative mt-24 overflow-hidden bg-footer-bg text-white">
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden="true"
+      >
+        <div className="absolute -top-32 left-[12%] w-80 h-80 rounded-full bg-accent/20 blur-[100px]" />
+        <div className="absolute -top-24 right-[12%] w-72 h-72 rounded-full bg-warm/10 blur-[100px]" />
+      </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_1fr_1.3fr] gap-x-6 gap-y-10">
+      <div className="ins-container relative pt-16 pb-12">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-14">
+          <div className="flex flex-col gap-3.5">
+            <Link
+              href="/"
+              className="inline-flex items-center text-white no-underline w-fit"
+            >
+              <Image
+                src="/brand/logo-dark-bg-96h.png"
+                alt="Instanta"
+                width={160}
+                height={48}
+                className="h-10 w-auto"
+              />
+            </Link>
+            <p className="text-sm text-white/60 max-w-[360px] m-0 leading-relaxed">
+              One group. Many ways to move forward. Logistics and travel
+              today, more businesses tomorrow.
+            </p>
+          </div>
+          <div className="text-xs tracking-[.08em] uppercase text-white/40">
+            Lagos · Abuja · Accra · Nairobi
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-10">
           {columns.map((c) => (
-            <div key={c.title} className="flex flex-col gap-3">
-              <div className="text-base font-medium text-white">
+            <div key={c.title} className="flex flex-col gap-3.5">
+              <div className="text-xs font-semibold tracking-[.1em] uppercase text-white/40">
                 {c.title}
               </div>
               {c.links.map((l) => (
                 <Link
                   key={l.label}
                   href={l.href}
-                  className="text-sm text-white/70 no-underline hover:text-white"
+                  className="text-sm text-white/70 no-underline hover:text-white transition-colors duration-150 w-fit"
                 >
                   {l.label}
                 </Link>
               ))}
             </div>
           ))}
-
-          <div className="col-span-2 sm:col-span-3 lg:col-span-1 flex flex-col gap-3.5">
-            <p className="text-sm text-white/70 max-w-[320px] m-0">
-              One group. Many ways to move forward. Logistics and travel
-              today, more businesses tomorrow.
-            </p>
-            <div className="text-xs text-white/50">
-              Lagos · Abuja · Accra · Nairobi
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="border-t border-white/10">
-        <div className="ins-container py-5 flex flex-col sm:flex-row gap-2.5 sm:justify-between items-center text-xs text-white/50 text-center sm:text-left">
+      <div className="relative border-t border-white/10">
+        <div className="ins-container py-5 flex flex-col sm:flex-row gap-2.5 sm:justify-between items-center text-xs text-white/40 text-center sm:text-left">
           <span>© 2026 Instanta Group</span>
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5">
-            <Link href="/design-system" className="text-inherit no-underline hover:text-white">
+            <Link
+              href="/design-system"
+              className="text-inherit no-underline hover:text-white transition-colors duration-150"
+            >
               Design system
             </Link>
-            <Link href="/admin" className="text-inherit no-underline hover:text-white">
+            <Link
+              href="/admin"
+              className="text-inherit no-underline hover:text-white transition-colors duration-150"
+            >
               Operations center
             </Link>
             <span>Privacy</span>

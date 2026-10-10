@@ -19,7 +19,7 @@ function DotGrid({ light }: { light?: boolean }) {
   );
 }
 
-/** Small reusable side-view truck glyph — reused wherever a scene needs to
+/** Small reusable side-view truck glyph reused wherever a scene needs to
  * point literally at "Instanta Logistics" rather than an abstract node. */
 function TruckGlyph({ x, y, scale = 1, color = "#017e84" }: { x: number; y: number; scale?: number; color?: string }) {
   return (

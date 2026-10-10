@@ -3,7 +3,7 @@
 /* ---------------------------------------------------------------------
    Instanta design tokens
    Visual language ported from odoo.com's production design system
-   (odoocdn.com web.assets_frontend.min.css) — same variable names as the
+   (odoocdn.com web.assets_frontend.min.css) same variable names as the
    original instanta.css handoff, Odoo-derived values.
    --------------------------------------------------------------------- */
 :root {
@@ -60,6 +60,7 @@
 @theme inline {
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-script: var(--font-caveat), cursive;
+  --font-heading: var(--font-outfit), var(--font-inter), system-ui, sans-serif;
 
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
@@ -151,6 +152,7 @@ h6 {
   line-height: 1.2;
   letter-spacing: -0.01em;
   font-weight: 600;
+  font-family: var(--font-heading);
 }
 
 h1,
@@ -277,10 +279,78 @@ a:hover {
   background-size: 24px 6px;
 }
 
-/* Header responsive breakpoints — see Header.tsx */
+/* Header responsive breakpoints see Header.tsx */
 @media (max-width: 1100px) {
   .hdr-opt2 {
     display: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Shimmer / entrance animation primitives — see components/ui/skeleton.tsx,
+   components/ui/modal.tsx, lib/toast-context.tsx.
+   --------------------------------------------------------------------- */
+@keyframes ins-shimmer {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+@keyframes ins-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ins-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ins-skeleton {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-neutral-200) 30%,
+    var(--color-neutral-100) 50%,
+    var(--color-neutral-200) 70%
+  );
+  background-size: 200% 100%;
+  animation: ins-shimmer 1.6s ease-in-out infinite;
+}
+
+.ins-fade-in {
+  animation: ins-fade-in 0.2s ease-out both;
+}
+
+.ins-slide-up {
+  animation: ins-slide-up 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ins-skeleton,
+  .ins-fade-in,
+  .ins-slide-up {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 } /* end @layer base */

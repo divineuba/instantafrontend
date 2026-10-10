@@ -8,12 +8,12 @@ import { ConfirmedActions } from "@/components/travels/confirmed-actions";
 import { getBooking } from "@/lib/travels";
 import { ApiError } from "@/lib/api";
 
-// See app/travels/detail/page.tsx — same reasoning: depends on ?booking= and
+// See app/travels/detail/page.tsx same reasoning: depends on ?booking= and
 // a live fetch (plus a possible redirect), so there's no static shell worth
 // prerendering.
 export const instant = false;
 
-// Deterministic pseudo-QR render keyed off the booking reference — purely
+// Deterministic pseudo-QR render keyed off the booking reference purely
 // decorative (there is no real boarding-pass barcode standard implemented
 // here), but stable per booking so the same ref always renders the same
 // pattern instead of looking random on every page load.

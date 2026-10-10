@@ -20,7 +20,7 @@ export interface SpeedOption {
   price: number;
 }
 
-/** Mirrors backend PricingService's seeded SPEED rules — kept in sync by hand. */
+/** Mirrors backend PricingService's seeded SPEED rules kept in sync by hand. */
 export const SPEEDS: SpeedOption[] = [
   { key: "STANDARD", name: "Standard", icon: "package", time: "Within 1–2 days", best: "Non-urgent parcels", price: 6.5 },
   { key: "EXPRESS", name: "Express", icon: "truck", time: "Within 4 hours", best: "Documents and small parcels", price: 9.0 },

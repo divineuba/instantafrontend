@@ -88,7 +88,7 @@ export default function Home() {
             </h1>
             <p className="text-lg leading-relaxed max-w-xl text-neutral-700">
               We bring together trusted services across logistics, travel and
-              more — helping individuals and businesses get where they need
+              more helping individuals and businesses get where they need
               to go.
             </p>
             <div className="flex gap-3 flex-wrap">
@@ -114,7 +114,7 @@ export default function Home() {
         <section id="services" className="ins-container pt-28">
           <div className="flex justify-between items-end mb-8 gap-6 flex-wrap">
             <div>
-              <SectionKicker>01 — Our businesses</SectionKicker>
+              <SectionKicker>01 Our businesses</SectionKicker>
               <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-xl">
                 Two businesses today. Built for many more.
               </h2>
@@ -183,7 +183,7 @@ export default function Home() {
 
         {/* Why Instanta */}
         <section className="ins-container pt-28">
-          <SectionKicker>02 — Why Instanta</SectionKicker>
+          <SectionKicker>02 Why Instanta</SectionKicker>
           <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-2xl mb-8">
             Every service, one standard.
           </h2>
@@ -202,7 +202,7 @@ export default function Home() {
         <section className="ins-container pt-28">
           <div className="rounded-lg border border-divider overflow-hidden grid sm:grid-cols-2 lg:grid-cols-[280px_repeat(4,minmax(0,1fr))]">
             <div className="p-7 border-b sm:border-b-0 sm:border-r border-divider flex flex-col justify-between gap-5">
-              <SectionKicker>03 — In numbers</SectionKicker>
+              <SectionKicker>03 In numbers</SectionKicker>
               <Tag variant="neutral" className="self-start">
                 Placeholder figures
               </Tag>
@@ -228,7 +228,7 @@ export default function Home() {
           <div className="rounded-xl bg-accent-900 text-white grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-12 p-6 sm:p-10 lg:p-12">
             <div className="flex flex-col gap-4">
               <div className="text-[11px] tracking-[.14em] uppercase text-accent-300 font-semibold">
-                04 — Instanta for Business
+                04 Instanta for Business
               </div>
               <h2 className="text-[clamp(28px,3.2vw,42px)] leading-tight">
                 Company deliveries and staff travel, on one account.

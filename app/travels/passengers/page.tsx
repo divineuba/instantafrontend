@@ -6,7 +6,7 @@ import { PassengerForm } from "@/components/travels/passenger-form";
 import { getOffer } from "@/lib/travels";
 import { ApiError } from "@/lib/api";
 
-// See app/travels/detail/page.tsx — same reasoning: depends on ?offer= and
+// See app/travels/detail/page.tsx same reasoning: depends on ?offer= and
 // a live fetch, so there's no static shell worth prerendering.
 export const instant = false;
 
