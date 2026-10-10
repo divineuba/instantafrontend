@@ -31,6 +31,8 @@ function ResultsBody() {
 
   const from = searchParams.get("from") ?? "Lagos · LOS";
   const to = searchParams.get("to") ?? "London · LHR";
+  const origin = searchParams.get("origin") ?? "LOS";
+  const destination = searchParams.get("destination") ?? "LHR";
   const departDate = searchParams.get("departDate") ?? "2026-10-12";
   const returnDate = searchParams.get("returnDate") ?? "";
 
@@ -46,6 +48,10 @@ function ResultsBody() {
     setLoading(true);
     setError(false);
     searchFlights({
+      origin,
+      destination,
+      departDate,
+      returnDate: returnDate || undefined,
       sort,
       stops: activeStops.length < 3 ? activeStops : undefined,
       airlines: airlineFilter.size > 0 ? Array.from(airlineFilter) : undefined,
@@ -56,7 +62,7 @@ function ResultsBody() {
         setError(true);
       })
       .finally(() => setLoading(false));
-  }, [sort, stops, airlineFilter]);
+  }, [origin, destination, departDate, returnDate, sort, stops, airlineFilter]);
 
   React.useEffect(() => {
     // Re-querying the server whenever sort/stops/airline filters change and

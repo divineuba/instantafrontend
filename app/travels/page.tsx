@@ -15,6 +15,12 @@ import { getPopularRoutes, TRAVEL_WHY, type PopularRoute } from "@/lib/travels";
 
 type TripType = "return" | "oneway" | "multicity";
 
+/** "Lagos · LOS" -> "LOS": search inputs are free text, the API wants the IATA code. */
+function extractCode(label: string) {
+  const parts = label.split("·").map((p) => p.trim());
+  return parts[parts.length - 1] || label.trim();
+}
+
 export default function TravelsHomePage() {
   const router = useRouter();
   const [trip, setTrip] = React.useState<TripType>("return");
@@ -43,6 +49,8 @@ export default function TravelsHomePage() {
     const qs = new URLSearchParams({
       from,
       to,
+      origin: extractCode(from),
+      destination: extractCode(to),
       departDate,
       returnDate: trip === "return" ? returnDate : "",
       adults: String(adults),
