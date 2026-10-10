@@ -9,6 +9,7 @@ import { Tag } from "@/components/ui/tag";
 import { SectionKicker } from "@/components/ui/section-kicker";
 import { getOverview, centsToUsd, type AccountOverview } from "@/lib/account";
 import { useAuth } from "@/lib/auth-context";
+import { OnboardingChecklist } from "@/components/account/onboarding-checklist";
 
 function statusVariant(status: string): "success" | "warning" | "error" | "neutral" | "info" {
   const s = status.toLowerCase();
@@ -57,12 +58,23 @@ export default function AccountOverviewPage() {
     <div className="flex flex-col gap-6 max-w-[920px]">
       <div>
         <h1 className="text-2xl font-bold">
-          Welcome back, {data.greetingName ?? user?.firstName}
+          {data.isNewAccount
+            ? `Welcome to Instanta, ${data.greetingName ?? user?.firstName}`
+            : `Welcome back, ${data.greetingName ?? user?.firstName}`}
         </h1>
         <p className="text-sm text-neutral-600 mt-1">
-          Here&apos;s what&apos;s happening across your deliveries, trips, and payments.
+          {data.isNewAccount
+            ? "Let's get your account set up."
+            : "Here's what's happening across your deliveries, trips, and payments."}
         </p>
       </div>
+
+      {data.isNewAccount && (
+        <OnboardingChecklist
+          emailVerified={data.emailVerified}
+          hasPaymentMethod={data.hasPaymentMethod}
+        />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>

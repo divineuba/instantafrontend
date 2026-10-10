@@ -29,6 +29,9 @@ export interface AccountOverview {
     sub: string;
     href: string;
   }[];
+  emailVerified: boolean;
+  hasPaymentMethod: boolean;
+  isNewAccount: boolean;
 }
 
 export interface ActivityRow {

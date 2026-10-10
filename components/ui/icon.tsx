@@ -53,6 +53,8 @@ import {
   Mail,
   WifiOff,
   Menu,
+  Eye,
+  EyeOff,
   type LucideProps,
 } from "lucide-react";
 
@@ -115,6 +117,8 @@ export const iconMap = {
   mail: Mail,
   wifioff: WifiOff,
   menu: Menu,
+  eye: Eye,
+  "eye-off": EyeOff,
 } as const;
 
 export type IconName = keyof typeof iconMap;

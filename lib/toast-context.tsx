@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     // Flags that we're now running in the browser, where document.body
-    // exists as a portal target — a genuine sync with that external fact.
+    // exists as a portal target a genuine sync with that external fact.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);

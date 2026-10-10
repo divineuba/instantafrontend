@@ -107,20 +107,20 @@ export const businesses: Business[] = [
       { label: "Flight booking", href: "/travels" },
       { label: "Travel services", href: "/services" },
       { label: "Corporate travel", href: "/business" },
-      { label: "Travel assistance", href: "/account/support" },
+      { label: "Travel assistance", href: "/support" },
     ],
     subnav: [
       { key: "home", label: "Flights", href: "/travels" },
       { key: "results", label: "Search results", href: "/travels/results" },
       { key: "manage", label: "Manage booking", href: "/account/trips" },
       { key: "corporate", label: "Corporate travel", href: "/business" },
-      { key: "help", label: "Travel assistance", href: "/account/support" },
+      { key: "help", label: "Travel assistance", href: "/support" },
     ],
     footerLinks: [
       { label: "Book a flight", href: "/travels" },
       { label: "Manage booking", href: "/account/trips" },
       { label: "Corporate travel", href: "/business" },
-      { label: "Travel assistance", href: "/account/support" },
+      { label: "Travel assistance", href: "/support" },
     ],
   },
 ];

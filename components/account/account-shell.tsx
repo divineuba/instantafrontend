@@ -8,6 +8,7 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createWorkspace } from "@/lib/account";
+import { VerifyEmailBanner } from "@/components/account/verify-email-banner";
 
 interface NavItem {
   href: string;
@@ -261,7 +262,10 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="p-6 md:p-10 min-w-0">{children}</main>
+      <main className="min-w-0 flex flex-col">
+        {user.emailVerified === false && <VerifyEmailBanner email={user.email} />}
+        <div className="p-6 md:p-10 flex-1">{children}</div>
+      </main>
     </div>
   );
 }

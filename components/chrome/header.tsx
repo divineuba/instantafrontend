@@ -53,7 +53,7 @@ export function Header({
   const isServicesActive = pathname?.startsWith("/services") ?? false;
   const isBusinessActive = pathname?.startsWith("/business") ?? false;
   const isAboutActive = pathname === "/";
-  const isSupportActive = pathname?.startsWith("/account/support") ?? false;
+  const isSupportActive = pathname?.startsWith("/support") ?? false;
 
   const navLinkClass = (isActive: boolean) =>
     cn(
@@ -131,7 +131,7 @@ export function Header({
             About
           </Link>
           <Link
-            href="/account/support"
+            href="/support"
             className={cn("hdr-opt2", navLinkClass(isSupportActive))}
           >
             Support
@@ -284,7 +284,7 @@ export function Header({
                 Book a flight
               </Link>
               <Link
-                href="/account/support"
+                href="/support"
                 className="py-2.5 text-text no-underline text-sm font-medium"
               >
                 Support

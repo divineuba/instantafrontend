@@ -233,7 +233,7 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
               <div className="text-neutral-600">Tracking ID</div>
               <div>{delivery.trackingId}</div>
             </div>
-            <LinkButton href="/account/support" variant="secondary" className="col-span-2">
+            <LinkButton href="/support" variant="secondary" className="col-span-2">
               <Icon name="help" size={14} /> Get help with this delivery
             </LinkButton>
           </div>
@@ -266,7 +266,7 @@ function TrackNotFound({
               Try again
             </Button>
           )}
-          <LinkButton href="/account/support" variant="ghost">
+          <LinkButton href="/support" variant="ghost">
             Contact support
           </LinkButton>
         </div>
@@ -288,7 +288,7 @@ function TrackNotFound({
         <LinkButton href="/account/trips" variant="secondary">
           See my deliveries
         </LinkButton>
-        <LinkButton href="/account/support" variant="ghost">
+        <LinkButton href="/support" variant="ghost">
           Contact support
         </LinkButton>
       </div>

@@ -3,6 +3,7 @@ import { cn } from "@/lib/cn";
 
 export function Field({
   label,
+  labelAction,
   htmlFor,
   optional,
   required,
@@ -12,6 +13,7 @@ export function Field({
   children,
 }: {
   label?: string;
+  labelAction?: React.ReactNode;
   htmlFor?: string;
   optional?: boolean;
   required?: boolean;
@@ -23,16 +25,19 @@ export function Field({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
-        <label
-          htmlFor={htmlFor}
-          className="text-[13px] font-medium text-neutral-800"
-        >
-          {label}
-          {required && <span className="text-error"> *</span>}
-          {optional && (
-            <span className="text-neutral-500 font-normal"> · optional</span>
-          )}
-        </label>
+        <div className="flex items-center justify-between gap-2">
+          <label
+            htmlFor={htmlFor}
+            className="text-[13px] font-medium text-neutral-800"
+          >
+            {label}
+            {required && <span className="text-error"> *</span>}
+            {optional && (
+              <span className="text-neutral-500 font-normal"> · optional</span>
+            )}
+          </label>
+          {labelAction}
+        </div>
       )}
       {children}
       {hint && !error && (
@@ -85,16 +90,17 @@ Select.displayName = "Select";
 
 export const Textarea = React.forwardRef<
   HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, ...props }, ref) => {
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }
+>(({ className, invalid, ...props }, ref) => {
   return (
     <textarea
       ref={ref}
       className={cn(
-        "w-full min-h-[84px] px-3 py-2 text-sm text-text bg-white border border-neutral-300 rounded-md transition-[border-color,box-shadow] duration-150 outline-none resize-y",
+        "w-full min-h-[84px] px-3 py-2 text-sm text-text bg-white border rounded-md transition-[border-color,box-shadow] duration-150 outline-none resize-y",
         "placeholder:text-neutral-500",
         "hover:border-neutral-400",
         "focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]",
+        invalid ? "border-error" : "border-neutral-300",
         className,
       )}
       {...props}

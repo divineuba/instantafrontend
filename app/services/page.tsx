@@ -9,6 +9,9 @@ import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Segmented } from "@/components/ui/segmented";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { FadeInWhenVisible } from "@/components/motion/fade-in-when-visible";
+import { AnimatedCounter } from "@/components/motion/animated-counter";
+import { cn } from "@/lib/cn";
 
 interface ServiceItem {
   name: string;
@@ -55,7 +58,7 @@ const GROUPS: ServiceGroup[] = [
     items: [
       { name: "Flight booking", icon: "plane", desc: "Compare fares across airlines and book.", href: "/travels", available: true },
       { name: "Corporate travel", icon: "building", desc: "Policies, approvals and central billing.", href: "/business", available: true },
-      { name: "Travel assistance", icon: "help", desc: "Changes, refunds and trip support.", href: "/account/support", available: true },
+      { name: "Travel assistance", icon: "help", desc: "Changes, refunds and trip support.", href: "/support", available: true },
       { name: "Ticketing", icon: "file", desc: "E-tickets and itineraries in your account.", href: "/account/trips", available: true },
       { name: "Visa support", icon: "globe", desc: "Document checklists and appointment help.", href: "/services", available: false },
     ],
@@ -107,87 +110,119 @@ export default function ServicesPage() {
   return (
     <>
       <Header business="group" />
-      <main className="flex-1 ins-container pt-14">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_420px] gap-10 items-end pb-8 border-b border-divider">
-          <div>
-            <SectionKicker>Services directory</SectionKicker>
-            <h1 className="text-[clamp(32px,4.4vw,56px)] leading-[1.05]">
-              Everything Instanta does, in one place.
-            </h1>
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
-              <Icon name="search" size={16} />
-            </span>
-            <input
-              className="w-full h-[42px] pl-9 pr-3 text-sm bg-white border border-neutral-300 rounded-md outline-none focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]"
-              placeholder="Search services e.g. same-day, visa, bulk"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 py-5 flex-wrap">
-          <Segmented
-            name="service-filter"
-            value={filter}
-            onChange={(v) => setFilter(v as FilterKey)}
-            options={[
-              { value: "all", label: `All (${counts.all})` },
-              { value: "logistics", label: `Logistics (${counts.logistics})` },
-              { value: "travels", label: `Travels (${counts.travels})` },
-              { value: "soon", label: `Coming soon (${counts.soon})` },
-            ]}
+      <main className="flex-1">
+        <section className="relative overflow-hidden">
+          <div
+            className="pointer-events-none absolute -top-32 right-[8%] w-96 h-96 rounded-full bg-accent/10 blur-[110px]"
+            aria-hidden="true"
           />
-          <span className="text-[13px] text-neutral-600 ml-auto">
-            {shownCount} service{shownCount === 1 ? "" : "s"}
-          </span>
-        </div>
+          <div
+            className="pointer-events-none absolute top-10 left-[4%] w-72 h-72 rounded-full bg-warm/10 blur-[100px]"
+            aria-hidden="true"
+          />
+          <div className="ins-container relative pt-16">
+            <FadeInWhenVisible>
+              <div className="grid lg:grid-cols-[minmax(0,1fr)_420px] gap-10 items-end pb-8 border-b border-divider">
+                <div>
+                  <SectionKicker>Services directory</SectionKicker>
+                  <h1 className="text-[clamp(32px,4.4vw,56px)] leading-[1.05]">
+                    Everything Instanta does, in one place.
+                  </h1>
+                  <p className="text-lg text-neutral-700 max-w-lg mt-3">
+                    <AnimatedCounter value={counts.all} className="text-accent-700 font-semibold" />{" "}
+                    services across logistics and travel, searchable from
+                    right here.
+                  </p>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
+                    <Icon name="search" size={16} />
+                  </span>
+                  <input
+                    className="w-full h-[46px] pl-9 pr-3 text-sm bg-white border border-neutral-300 rounded-md outline-none focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]"
+                    placeholder="Search services e.g. same-day, visa, bulk"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+            </FadeInWhenVisible>
 
-        {visibleGroups.length === 0 && (
-          <div className="py-24 text-center text-neutral-600 border-t border-divider">
-            No services match &ldquo;{query}&rdquo;. Try a different search.
+            <div className="flex items-center gap-4 py-5 flex-wrap">
+              <Segmented
+                name="service-filter"
+                value={filter}
+                onChange={(v) => setFilter(v as FilterKey)}
+                options={[
+                  { value: "all", label: `All (${counts.all})` },
+                  { value: "logistics", label: `Logistics (${counts.logistics})` },
+                  { value: "travels", label: `Travels (${counts.travels})` },
+                  { value: "soon", label: `Coming soon (${counts.soon})` },
+                ]}
+              />
+              <span className="text-[13px] text-neutral-600 ml-auto">
+                {shownCount} service{shownCount === 1 ? "" : "s"}
+              </span>
+            </div>
           </div>
-        )}
+        </section>
+        <div className="ins-container pb-16">
+          {visibleGroups.length === 0 && (
+            <div className="py-24 text-center text-neutral-600 border-t border-divider">
+              No services match &ldquo;{query}&rdquo;. Try a different search.
+            </div>
+          )}
 
-        {visibleGroups.map((g) => (
-          <section
-            key={g.key}
-            className="grid md:grid-cols-[260px_minmax(0,1fr)] gap-8 py-8 border-t border-divider"
-          >
-            <div className="flex flex-col gap-2.5">
-              <Icon name={g.icon} size={28} className="text-accent" />
-              <h2 className="text-2xl">{g.name}</h2>
-              <p className="text-sm text-neutral-700 m-0">{g.desc}</p>
-              <LinkButton href={g.href} variant="ghost" className="self-start pl-0">
-                {g.cta} <Icon name="arrow" size={14} />
-              </LinkButton>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {g.items.map((s) => (
-                <Link
-                  key={s.name}
-                  href={s.href}
-                  className={`p-5 flex flex-col gap-2.5 rounded-lg border bg-card text-text no-underline hover:border-accent-300 hover:bg-accent-100/40 transition-colors ${
-                    s.available ? "border-divider" : "border-dashed border-divider"
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <Icon name={s.icon} size={20} className="text-accent-700" />
-                    <Tag variant={s.available ? "accent" : "neutral"}>
-                      {s.available ? "Available" : "Coming soon"}
-                    </Tag>
-                  </div>
-                  <div className="font-semibold text-[18px]">{s.name}</div>
-                  <p className="text-sm text-neutral-700 m-0 flex-1">{s.desc}</p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
+          {visibleGroups.map((g, gi) => (
+            <FadeInWhenVisible key={g.key} delay={gi * 0.05}>
+              <section className="grid md:grid-cols-[260px_minmax(0,1fr)] gap-8 py-8 border-t border-divider">
+                <div className="flex flex-col gap-2.5">
+                  <span className="flex items-center justify-center size-12 rounded-full bg-accent-100 text-accent-700">
+                    <Icon name={g.icon} size={24} />
+                  </span>
+                  <h2 className="text-2xl">{g.name}</h2>
+                  <p className="text-sm text-neutral-700 m-0">{g.desc}</p>
+                  <LinkButton href={g.href} variant="ghost" className="self-start pl-0">
+                    {g.cta} <Icon name="arrow" size={14} />
+                  </LinkButton>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {g.items.map((s) => (
+                    <Link
+                      key={s.name}
+                      href={s.href}
+                      className={cn(
+                        "group p-5 flex flex-col gap-2.5 rounded-lg border bg-card text-text no-underline transition-all duration-200 hover:border-accent hover:shadow-[0_8px_24px_-12px_rgba(17,24,39,0.12)] hover:-translate-y-0.5",
+                        s.available ? "border-divider" : "border-dashed border-divider",
+                      )}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="flex items-center justify-center size-9 rounded-full bg-accent-100 text-accent-700">
+                          <Icon name={s.icon} size={18} />
+                        </span>
+                        <Tag variant={s.available ? "accent" : "neutral"}>
+                          {s.available ? "Available" : "Coming soon"}
+                        </Tag>
+                      </div>
+                      <div className="flex items-center gap-1.5 font-semibold text-[18px]">
+                        {s.name}
+                        <Icon
+                          name="right"
+                          size={14}
+                          className="text-accent opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
+                        />
+                      </div>
+                      <p className="text-sm text-neutral-700 m-0 flex-1">{s.desc}</p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            </FadeInWhenVisible>
+          ))}
+        </div>
       </main>
       <Footer />
     </>
   );
 }
+

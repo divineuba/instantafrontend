@@ -16,15 +16,15 @@ export function Footer() {
         { label: "About Instanta", href: "/" },
         { label: "All services", href: "/services" },
         { label: "For Business", href: "/business" },
-        { label: "Careers", href: "/" },
+        { label: "Careers", href: "/careers" },
       ],
     },
     {
       title: "Help",
       links: [
-        { label: "Support center", href: "/account/support" },
+        { label: "Support center", href: "/support" },
         { label: "My account", href: "/account" },
-        { label: "Contact us", href: "/account/support" },
+        { label: "Contact us", href: "/contact" },
       ],
     },
   ];
@@ -89,19 +89,17 @@ export function Footer() {
           <span>© 2026 Instanta Group</span>
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5">
             <Link
-              href="/design-system"
+              href="/privacy"
               className="text-inherit no-underline hover:text-white transition-colors duration-150"
             >
-              Design system
+              Privacy
             </Link>
             <Link
-              href="/admin"
+              href="/terms"
               className="text-inherit no-underline hover:text-white transition-colors duration-150"
             >
-              Operations center
+              Terms
             </Link>
-            <span>Privacy</span>
-            <span>Terms</span>
           </div>
         </div>
       </div>

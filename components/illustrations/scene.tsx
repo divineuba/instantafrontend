@@ -1,10 +1,11 @@
-type SceneVariant = "network" | "delivery" | "travel" | "growth";
+type SceneVariant = "network" | "delivery" | "travel" | "growth" | "auth";
 
 const SCENE_BG: Record<SceneVariant, string> = {
   network: "linear-gradient(135deg, #f5eff4 0%, #ffffff 60%)",
   delivery: "linear-gradient(135deg, #e6f5f5 0%, #ffffff 60%)",
   travel: "linear-gradient(160deg, #3d2837 0%, #604058 55%, #714b67 100%)",
   growth: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 60%)",
+  auth: "linear-gradient(150deg, #241a21 0%, #4a2f3f 48%, #714b67 100%)",
 };
 
 function DotGrid({ light }: { light?: boolean }) {
@@ -168,11 +169,39 @@ function GrowthArt() {
   );
 }
 
+function AuthArt() {
+  return (
+    <svg viewBox="0 0 400 300" className="absolute inset-0 w-full h-full" fill="none">
+      {/* faint stars, matching the dark travel treatment */}
+      <circle cx="70" cy="46" r="1.5" fill="#ffffff" fillOpacity="0.5" />
+      <circle cx="330" cy="40" r="1.5" fill="#ffffff" fillOpacity="0.4" />
+      <circle cx="300" cy="230" r="1.5" fill="#ffffff" fillOpacity="0.45" />
+      {/* orbit lines from each business into the one secure account */}
+      <path d="M94 212 C 130 196, 160 180, 188 166" stroke="#99c9c9" strokeOpacity="0.55" strokeWidth="3" strokeDasharray="2 10" strokeLinecap="round" />
+      <path d="M212 134 C 250 112, 282 94, 312 78" stroke="#d4bccd" strokeOpacity="0.6" strokeWidth="3" strokeDasharray="2 10" strokeLinecap="round" />
+      {/* logistics node */}
+      <circle cx="66" cy="222" r="28" fill="#ffffff" fillOpacity="0.1" />
+      <TruckGlyph x={47} y={210} scale={0.72} color="#02c7c7" />
+      {/* travels node */}
+      <circle cx="334" cy="66" r="28" fill="#ffffff" fillOpacity="0.1" />
+      <g transform="translate(318,52)">
+        <PlaneGlyph x={0} y={0} scale={0.42} rotate={-18} color="#ffffff" />
+      </g>
+      {/* one secure account hub */}
+      <rect x="170" y="118" width="60" height="60" rx="16" fill="#ffffff" />
+      <rect x="188" y="142" width="24" height="18" rx="3" fill="#714b67" />
+      <path d="M192 142 v-8 a8 8 0 0 1 16 0 v8" stroke="#714b67" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+      <circle cx="200" cy="150" r="2.2" fill="#ffffff" />
+    </svg>
+  );
+}
+
 const SCENE_ART: Record<SceneVariant, () => React.JSX.Element> = {
   network: NetworkArt,
   delivery: DeliveryArt,
   travel: TravelArt,
   growth: GrowthArt,
+  auth: AuthArt,
 };
 
 export function Scene({
@@ -186,7 +215,7 @@ export function Scene({
   return (
     <div className={className} style={{ background: SCENE_BG[variant] }}>
       <div className="relative w-full h-full">
-        <DotGrid light={variant === "travel"} />
+        <DotGrid light={variant === "travel" || variant === "auth"} />
         <Art />
       </div>
     </div>
