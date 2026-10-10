@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Tag } from "@/components/ui/tag";
 import { PageHeader } from "@/components/ui/page-header";
@@ -25,11 +26,22 @@ function statusVariant(status: string): "success" | "warning" | "error" | "neutr
   return "neutral";
 }
 
-export default function ActivityPage() {
+function ActivityBody() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const q = searchParams.get("q") ?? "";
+  const [searchTerm, setSearchTerm] = React.useState(q);
   const [tab, setTab] = React.useState<Tab>("all");
   const [data, setData] = React.useState<ActivityResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // Keeps the input in sync when the URL's `q` changes from elsewhere
+    // (e.g. the header search form navigating here).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchTerm(q);
+  }, [q]);
 
   React.useEffect(() => {
     let active = true;
@@ -52,12 +64,42 @@ export default function ActivityPage() {
     };
   }, [tab]);
 
+  const filteredRows = React.useMemo(() => {
+    if (!data) return [];
+    const term = q.trim().toLowerCase();
+    if (!term) return data.rows;
+    return data.rows.filter(
+      (row) =>
+        row.title.toLowerCase().includes(term) ||
+        row.ref.toLowerCase().includes(term) ||
+        row.vertical.toLowerCase().includes(term),
+    );
+  }, [data, q]);
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const term = searchTerm.trim();
+    router.push(term ? `/account/activity?q=${encodeURIComponent(term)}` : "/account/activity");
+  }
+
   return (
     <div className="flex flex-col gap-5 max-w-[920px]">
       <PageHeader
         title="Activity"
         subtitle="All your deliveries, trips, and payments in one place."
       />
+
+      <form onSubmit={submitSearch} className="relative max-w-sm">
+        <span className="absolute left-2.5 top-2.5 text-neutral-600">
+          <Icon name="search" size={16} />
+        </span>
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full min-h-[38px] pl-9 pr-3 py-2 text-sm bg-white border border-neutral-300 rounded-md outline-none focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]"
+          placeholder="Search by title or reference…"
+        />
+      </form>
 
       <div className="flex gap-1 border-b border-divider overflow-x-auto">
         {TABS.map((t) => (
@@ -89,14 +131,18 @@ export default function ActivityPage() {
 
       {!loading && !error && data && (
         <div className="flex flex-col gap-1">
-          {data.rows.length === 0 && (
+          {filteredRows.length === 0 && (
             <EmptyState
               icon="activity"
-              title="Nothing here yet"
-              description="Activity for this filter will show up here."
+              title={q ? "No matches" : "Nothing here yet"}
+              description={
+                q
+                  ? `Nothing matches "${q}" in this filter.`
+                  : "Activity for this filter will show up here."
+              }
             />
           )}
-          {data.rows.map((row, i) => (
+          {filteredRows.map((row, i) => (
             <div
               key={i}
               className="flex items-center gap-3 px-4 py-3 bg-card border border-divider rounded-lg"
@@ -118,5 +164,13 @@ export default function ActivityPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <React.Suspense fallback={<SkeletonText lines={5} />}>
+      <ActivityBody />
+    </React.Suspense>
   );
 }

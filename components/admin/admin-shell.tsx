@@ -16,6 +16,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [error, setError] = React.useState<"forbidden" | "failed" | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchTerm.trim();
+    router.push(q ? `/admin/search?q=${encodeURIComponent(q)}` : "/admin/search");
+  }
 
   React.useEffect(() => {
     let active = true;
@@ -116,15 +123,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <div className="relative w-full max-w-[420px] hidden sm:block">
+        <form onSubmit={submitSearch} className="relative w-full max-w-[420px] hidden sm:block">
           <span className="absolute left-2.5 top-2.5 text-neutral-600">
             <Icon name="search" size={16} />
           </span>
           <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full min-h-[38px] pl-9 pr-3 py-2 text-sm bg-white border border-neutral-300 rounded-md outline-none focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]"
             placeholder="Search customers, bookings, deliveries…"
           />
-        </div>
+        </form>
 
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-accent-800 bg-accent-100 px-2.5 py-1.5 rounded-full">

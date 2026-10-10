@@ -54,7 +54,14 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   const [newBizOpen, setNewBizOpen] = React.useState(false);
   const [newBizName, setNewBizName] = React.useState("");
   const [newBizError, setNewBizError] = React.useState<string | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = React.useState("");
   const toast = useToast();
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchTerm.trim();
+    router.push(q ? `/account/activity?q=${encodeURIComponent(q)}` : "/account/activity");
+  }
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -126,15 +133,17 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <div className="relative w-full max-w-[420px] hidden sm:block">
+        <form onSubmit={submitSearch} className="relative w-full max-w-[420px] hidden sm:block">
           <span className="absolute left-2.5 top-2.5 text-neutral-600">
             <Icon name="search" size={16} />
           </span>
           <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full min-h-[38px] pl-9 pr-3 py-2 text-sm bg-white border border-neutral-300 rounded-md outline-none focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-200)]"
             placeholder="Search deliveries, trips, payments…"
           />
-        </div>
+        </form>
 
         <div className="ml-auto flex items-center gap-2">
           <Link
