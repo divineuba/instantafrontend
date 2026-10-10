@@ -5,6 +5,10 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import { getProfile, updateProfile, revokeSession, type ProfileResponse } from "@/lib/account";
 import { useFieldErrors } from "@/lib/use-field-errors";
@@ -24,8 +28,8 @@ export default function ProfilePage() {
   });
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [saved, setSaved] = React.useState(false);
   const { errors, setFieldError, validateAll } = useFieldErrors<ProfileField>();
+  const toast = useToast();
 
   const validators: Record<ProfileField, () => string | undefined> = {
     firstName: () => (form.firstName.trim() ? undefined : "First name is required"),
@@ -61,11 +65,10 @@ export default function ProfilePage() {
     if (!validateAll(validators)) return;
     setSaving(true);
     setSaveError(null);
-    setSaved(false);
     try {
       await updateProfile(form);
-      setSaved(true);
       load();
+      toast("Profile updated.", "success");
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : "Couldn't save profile.");
     } finally {
@@ -76,21 +79,31 @@ export default function ProfilePage() {
   async function handleRevoke(id: string) {
     await revokeSession(id);
     load();
+    toast("Session revoked.", "success");
   }
 
-  if (loading) return <div className="text-sm text-neutral-600">Loading profile…</div>;
-  if (error || !profile) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 max-w-[640px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-32 h-7" />
+          <Skeleton variant="text" className="w-72" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-lg" />
+        <SkeletonText lines={2} />
+      </div>
+    );
+  }
+  if (error || !profile) {
+    return <EmptyState icon="alert" title="Couldn't load your profile" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[640px]">
-      <div>
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <p className="text-sm text-neutral-600 mt-1">Manage your personal details and sessions.</p>
-      </div>
+      <PageHeader title="Profile" subtitle="Manage your personal details and sessions." />
 
       <form onSubmit={handleSave} className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-4">
         {saveError && <div className="text-sm text-error">{saveError}</div>}
-        {saved && <div className="text-sm text-success">Profile updated.</div>}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="First name" required error={errors.firstName}>
             <Input

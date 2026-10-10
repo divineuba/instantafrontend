@@ -7,6 +7,10 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Tag } from "@/components/ui/tag";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import {
   getTrips,
@@ -33,6 +37,7 @@ export default function TripsPage() {
   const [form, setForm] = React.useState(emptyForm);
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -58,6 +63,7 @@ export default function TripsPage() {
       setForm(emptyForm);
       setShowForm(false);
       load();
+      toast("Passenger saved.", "success");
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Couldn't save passenger.");
     } finally {
@@ -65,17 +71,28 @@ export default function TripsPage() {
     }
   }
 
-  if (loading) return <div className="text-sm text-neutral-600">Loading trips…</div>;
-  if (error || !data) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 max-w-[920px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-24 h-7" />
+          <Skeleton variant="text" className="w-96" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <SkeletonText lines={4} />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return <EmptyState icon="alert" title="Couldn't load your trips" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[920px]">
-      <div>
-        <h1 className="text-2xl font-bold">Trips</h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          Upcoming and past flights, travel documents, and saved passengers.
-        </p>
-      </div>
+      <PageHeader
+        title="Trips"
+        subtitle="Upcoming and past flights, travel documents, and saved passengers."
+      />
 
       <div>
         <SectionKicker>Upcoming trip</SectionKicker>
@@ -108,7 +125,7 @@ export default function TripsPage() {
       <div>
         <SectionKicker>Past trips</SectionKicker>
         {data.past.length === 0 ? (
-          <div className="text-sm text-neutral-600">No past trips yet.</div>
+          <EmptyState icon="plane" title="No past trips yet" />
         ) : (
           <div className="flex flex-col gap-1">
             {data.past.map((t) => (
@@ -133,7 +150,7 @@ export default function TripsPage() {
       <div>
         <SectionKicker>Documents</SectionKicker>
         {data.documents.length === 0 ? (
-          <div className="text-sm text-neutral-600">No documents yet.</div>
+          <EmptyState icon="file" title="No documents yet" />
         ) : (
           <div className="flex flex-col gap-1">
             {data.documents.map((d, i) => (
@@ -242,7 +259,7 @@ export default function TripsPage() {
         )}
 
         {data.passengers.length === 0 ? (
-          <div className="text-sm text-neutral-600">No saved passengers yet.</div>
+          <EmptyState icon="user" title="No saved passengers yet" />
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
             {data.passengers.map((p) => (

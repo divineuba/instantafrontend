@@ -8,6 +8,10 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Tag } from "@/components/ui/tag";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/table";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import {
   getPayments,
@@ -46,6 +50,7 @@ export default function PaymentsPage() {
   const [cardError, setCardError] = React.useState<string | null>(null);
   const [savingCard, setSavingCard] = React.useState(false);
   const { errors, setFieldError, validateAll } = useFieldErrors<CardField>();
+  const toast = useToast();
 
   const cardValidators: Record<CardField, () => string | undefined> = {
     last4: () => (/^\d{4}$/.test(cardForm.last4) ? undefined : "Enter the last 4 digits"),
@@ -83,6 +88,7 @@ export default function PaymentsPage() {
       else await withdrawWallet(cents);
       setAmount("");
       load();
+      toast(action === "topup" ? "Wallet topped up." : "Withdrawal complete.", "success");
     } catch (err) {
       setWalletError(err instanceof ApiError ? err.message : "Transaction failed.");
     } finally {
@@ -100,6 +106,7 @@ export default function PaymentsPage() {
       setShowCardForm(false);
       setCardForm({ brand: "Visa", last4: "", expiryMonth: 1, expiryYear: new Date().getFullYear() });
       load();
+      toast("Card added.", "success");
     } catch (err) {
       setCardError(err instanceof ApiError ? err.message : "Couldn't add card.");
     } finally {
@@ -107,15 +114,28 @@ export default function PaymentsPage() {
     }
   }
 
-  if (loading) return <div className="text-sm text-neutral-600">Loading payments…</div>;
-  if (error || !data) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 max-w-[920px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-40 h-7" />
+          <Skeleton variant="text" className="w-80" />
+        </div>
+        <Skeleton className="h-36 w-full sm:max-w-[420px] rounded-lg" />
+        <SkeletonText lines={4} />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return <EmptyState icon="alert" title="Couldn't load payments" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[920px]">
-      <div>
-        <h1 className="text-2xl font-bold">Payments</h1>
-        <p className="text-sm text-neutral-600 mt-1">Wallet balance, saved cards, and transaction history.</p>
-      </div>
+      <PageHeader
+        title="Payments"
+        subtitle="Wallet balance, saved cards, and transaction history."
+      />
 
       <Card className="sm:max-w-[420px]">
         <CardKicker>Wallet balance</CardKicker>
@@ -206,7 +226,7 @@ export default function PaymentsPage() {
         )}
 
         {data.methods.length === 0 ? (
-          <div className="text-sm text-neutral-600">No saved payment methods.</div>
+          <EmptyState icon="card" title="No saved payment methods" />
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
             {data.methods.map((m) => (
@@ -230,7 +250,7 @@ export default function PaymentsPage() {
       <div>
         <SectionKicker>Transactions</SectionKicker>
         {data.transactions.length === 0 ? (
-          <div className="text-sm text-neutral-600">No transactions yet.</div>
+          <EmptyState icon="file" title="No transactions yet" />
         ) : (
           <Table>
             <Thead>

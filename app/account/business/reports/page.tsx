@@ -3,6 +3,9 @@
 import * as React from "react";
 import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useWorkspace } from "@/lib/workspace-context";
 import { getBizReports, centsToUsd, type BizReports } from "@/lib/account";
 
@@ -25,16 +28,32 @@ export default function BizReportsPage() {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  if (!workspaceId) return <div className="text-sm text-neutral-600">No business workspace selected.</div>;
-  if (loading) return <div className="text-sm text-neutral-600">Loading reports…</div>;
-  if (error || !data) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (!workspaceId) {
+    return <EmptyState icon="building" title="No business workspace selected" />;
+  }
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 max-w-[960px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-28 h-7" />
+          <Skeleton variant="text" className="w-64" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+        <Skeleton className="h-56 w-full rounded-lg" />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return <EmptyState icon="alert" title="Couldn't load reports" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[960px]">
-      <div>
-        <h1 className="text-2xl font-bold">Reports</h1>
-        <p className="text-sm text-neutral-600 mt-1">Spend trends across your workspace.</p>
-      </div>
+      <PageHeader title="Reports" subtitle="Spend trends across your workspace." />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {data.reportCards.map((r, i) => (

@@ -3,6 +3,9 @@
 import * as React from "react";
 import { Icon } from "@/components/ui/icon";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useWorkspace } from "@/lib/workspace-context";
 import { getBizOrders, type BizOrderRow } from "@/lib/account";
 
@@ -34,18 +37,29 @@ export default function BizOrdersPage() {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  if (!workspaceId) return <div className="text-sm text-neutral-600">No business workspace selected.</div>;
-  if (loading) return <div className="text-sm text-neutral-600">Loading orders…</div>;
-  if (error || !rows) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (!workspaceId) {
+    return <EmptyState icon="building" title="No business workspace selected" />;
+  }
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 max-w-[960px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-40 h-7" />
+          <Skeleton variant="text" className="w-80" />
+        </div>
+        <SkeletonText lines={5} />
+      </div>
+    );
+  }
+  if (error || !rows) {
+    return <EmptyState icon="alert" title="Couldn't load orders" description={error ?? "Something went wrong."} />;
+  }
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.vertical === filter);
 
   return (
     <div className="flex flex-col gap-5 max-w-[960px]">
-      <div>
-        <h1 className="text-2xl font-bold">Orders & trips</h1>
-        <p className="text-sm text-neutral-600 mt-1">Deliveries and flights booked across your team.</p>
-      </div>
+      <PageHeader title="Orders & trips" subtitle="Deliveries and flights booked across your team." />
 
       <div className="flex gap-1.5">
         {(["all", "Delivery", "Flight"] as const).map((f) => (
@@ -65,9 +79,7 @@ export default function BizOrdersPage() {
       </div>
 
       <div className="flex flex-col gap-1">
-        {filtered.length === 0 && (
-          <div className="text-sm text-neutral-600 py-8 text-center">No orders yet.</div>
-        )}
+        {filtered.length === 0 && <EmptyState icon="package" title="No orders yet" />}
         {filtered.map((r, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3 bg-card border border-divider rounded-lg">
             <span className="size-8 grid place-items-center bg-accent-100 text-accent-800 rounded-md shrink-0">

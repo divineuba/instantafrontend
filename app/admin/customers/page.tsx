@@ -4,6 +4,9 @@ import * as React from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonTableRows } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAdminCustomers, type AdminCustomer } from "@/lib/admin";
 
 export default function AdminCustomersPage() {
@@ -30,17 +33,14 @@ export default function AdminCustomersPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1120px]">
-      <div>
-        <h1 className="text-2xl font-bold">Customers</h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          Every individual and business account across Instanta.
-        </p>
-      </div>
+      <PageHeader
+        title="Customers"
+        subtitle="Every individual and business account across Instanta."
+      />
 
-      {loading && <div className="text-sm text-neutral-600">Loading customers…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {error && <EmptyState icon="alert" title="Couldn't load customers" description={error} />}
 
-      {data && !loading && !error && (
+      {(loading || (data && !error)) && (
         <Table>
           <Thead>
             <Tr>
@@ -53,7 +53,8 @@ export default function AdminCustomersPage() {
             </Tr>
           </Thead>
           <Tbody>
-            {data.map((c) => (
+            {loading && <SkeletonTableRows rows={6} columns={6} />}
+            {data?.map((c) => (
               <Tr key={c.id}>
                 <Td>
                   <div className="flex items-center gap-2.5">
@@ -84,10 +85,10 @@ export default function AdminCustomersPage() {
                 </Td>
               </Tr>
             ))}
-            {data.length === 0 && (
+            {!loading && data?.length === 0 && (
               <Tr>
-                <Td colSpan={6} className="text-center text-neutral-600 py-8">
-                  No customers yet.
+                <Td colSpan={6} className="p-0">
+                  <EmptyState icon="users" title="No customers yet" />
                 </Td>
               </Tr>
             )}

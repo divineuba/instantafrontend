@@ -3,6 +3,10 @@
 import * as React from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { getNotifications, markAllNotificationsRead, type NotificationItem } from "@/lib/account";
 
 const FILTERS: { key: string; label: string }[] = [
@@ -25,6 +29,7 @@ export default function NotificationsPage() {
   const [items, setItems] = React.useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -44,19 +49,20 @@ export default function NotificationsPage() {
   async function handleMarkAllRead() {
     await markAllNotificationsRead();
     load();
+    toast("All notifications marked as read.", "success");
   }
 
   return (
     <div className="flex flex-col gap-5 max-w-[720px]">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Notifications</h1>
-          <p className="text-sm text-neutral-600 mt-1">Updates on deliveries, trips, and payments.</p>
-        </div>
-        <Button variant="secondary" onClick={handleMarkAllRead}>
-          Mark all read
-        </Button>
-      </div>
+      <PageHeader
+        title="Notifications"
+        subtitle="Updates on deliveries, trips, and payments."
+        actions={
+          <Button variant="secondary" onClick={handleMarkAllRead}>
+            Mark all read
+          </Button>
+        }
+      />
 
       <div className="flex gap-1.5 flex-wrap">
         {FILTERS.map((f) => (
@@ -75,13 +81,13 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      {loading && <div className="text-sm text-neutral-600">Loading…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && <SkeletonText lines={5} />}
+      {error && <EmptyState icon="alert" title="Couldn't load notifications" description={error} />}
 
       {!loading && !error && items && (
         <div className="flex flex-col gap-1">
           {items.length === 0 && (
-            <div className="text-sm text-neutral-600 py-8 text-center">No notifications.</div>
+            <EmptyState icon="bell" title="No notifications" description="You're all caught up." />
           )}
           {items.map((n) => (
             <div

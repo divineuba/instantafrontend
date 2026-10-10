@@ -6,6 +6,9 @@ import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/table";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useWorkspace } from "@/lib/workspace-context";
 import { getBizBilling, type BizBilling } from "@/lib/account";
 
@@ -36,16 +39,28 @@ export default function BizBillingPage() {
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
-  if (!workspaceId) return <div className="text-sm text-neutral-600">No business workspace selected.</div>;
-  if (loading) return <div className="text-sm text-neutral-600">Loading billing…</div>;
-  if (error || !data) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (!workspaceId) {
+    return <EmptyState icon="building" title="No business workspace selected" />;
+  }
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 max-w-[960px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-48 h-7" />
+          <Skeleton variant="text" className="w-72" />
+        </div>
+        <Skeleton className="h-24 w-full sm:max-w-[320px] rounded-lg" />
+        <SkeletonText lines={4} />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return <EmptyState icon="alert" title="Couldn't load billing" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[960px]">
-      <div>
-        <h1 className="text-2xl font-bold">Billing & expenses</h1>
-        <p className="text-sm text-neutral-600 mt-1">Current statement, cost centres, and invoices.</p>
-      </div>
+      <PageHeader title="Billing & expenses" subtitle="Current statement, cost centres, and invoices." />
 
       <Card className="sm:max-w-[320px]">
         <CardKicker>Current statement</CardKicker>

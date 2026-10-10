@@ -3,6 +3,9 @@
 import * as React from "react";
 import { Icon } from "@/components/ui/icon";
 import { Tag } from "@/components/ui/tag";
+import { PageHeader } from "@/components/ui/page-header";
+import { SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getActivity, type ActivityResponse } from "@/lib/account";
 
 type Tab = "all" | "deliveries" | "flights" | "payments";
@@ -51,12 +54,10 @@ export default function ActivityPage() {
 
   return (
     <div className="flex flex-col gap-5 max-w-[920px]">
-      <div>
-        <h1 className="text-2xl font-bold">Activity</h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          All your deliveries, trips, and payments in one place.
-        </p>
-      </div>
+      <PageHeader
+        title="Activity"
+        subtitle="All your deliveries, trips, and payments in one place."
+      />
 
       <div className="flex gap-1 border-b border-divider overflow-x-auto">
         {TABS.map((t) => (
@@ -83,15 +84,17 @@ export default function ActivityPage() {
         ))}
       </div>
 
-      {loading && <div className="text-sm text-neutral-600">Loading…</div>}
-      {error && <div className="text-sm text-error">{error}</div>}
+      {loading && <SkeletonText lines={5} />}
+      {error && <EmptyState icon="alert" title="Couldn't load activity" description={error} />}
 
       {!loading && !error && data && (
         <div className="flex flex-col gap-1">
           {data.rows.length === 0 && (
-            <div className="text-sm text-neutral-600 py-8 text-center">
-              Nothing here yet.
-            </div>
+            <EmptyState
+              icon="activity"
+              title="Nothing here yet"
+              description="Activity for this filter will show up here."
+            />
           )}
           {data.rows.map((row, i) => (
             <div

@@ -7,6 +7,9 @@ import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getOverview, centsToUsd, type AccountOverview } from "@/lib/account";
 import { useAuth } from "@/lib/auth-context";
 import { OnboardingChecklist } from "@/components/account/onboarding-checklist";
@@ -47,27 +50,54 @@ export default function AccountOverviewPage() {
   }, []);
 
   if (loading) {
-    return <div className="text-sm text-neutral-600">Loading overview…</div>;
+    return (
+      <div className="flex flex-col gap-6 max-w-[920px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-64 h-7" />
+          <Skeleton variant="text" className="w-96" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-5">
+              <Skeleton variant="text" className="w-20" />
+              <Skeleton variant="text" className="w-28 h-6" />
+              <SkeletonText lines={1} />
+              <Skeleton className="h-9 w-32 rounded-md mt-1" />
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-40" />
+          <SkeletonText lines={3} />
+        </div>
+      </div>
+    );
   }
 
   if (error || !data) {
-    return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+    return (
+      <EmptyState
+        icon="alert"
+        title="Couldn't load your overview"
+        description={error ?? "Something went wrong."}
+      />
+    );
   }
 
   return (
     <div className="flex flex-col gap-6 max-w-[920px]">
-      <div>
-        <h1 className="text-2xl font-bold">
-          {data.isNewAccount
+      <PageHeader
+        title={
+          data.isNewAccount
             ? `Welcome to Instanta, ${data.greetingName ?? user?.firstName}`
-            : `Welcome back, ${data.greetingName ?? user?.firstName}`}
-        </h1>
-        <p className="text-sm text-neutral-600 mt-1">
-          {data.isNewAccount
+            : `Welcome back, ${data.greetingName ?? user?.firstName}`
+        }
+        subtitle={
+          data.isNewAccount
             ? "Let's get your account set up."
-            : "Here's what's happening across your deliveries, trips, and payments."}
-        </p>
-      </div>
+            : "Here's what's happening across your deliveries, trips, and payments."
+        }
+      />
 
       {data.isNewAccount && (
         <OnboardingChecklist
@@ -156,7 +186,11 @@ export default function AccountOverviewPage() {
         </div>
         <div className="flex flex-col gap-1">
           {data.recent.length === 0 && (
-            <div className="text-sm text-neutral-600">No activity yet.</div>
+            <EmptyState
+              icon="activity"
+              title="No activity yet"
+              description="Your deliveries, trips and payments will show up here."
+            />
           )}
           {data.recent.map((row, i) => (
             <div

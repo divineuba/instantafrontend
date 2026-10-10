@@ -6,6 +6,10 @@ import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { SectionKicker } from "@/components/ui/section-kicker";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/lib/toast-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { getBizOverview, decideApproval, type BizOverview } from "@/lib/account";
 
@@ -15,6 +19,7 @@ export default function BizOverviewPage() {
   const [data, setData] = React.useState<BizOverview | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const toast = useToast();
 
   const load = React.useCallback(() => {
     if (!workspaceId) return;
@@ -36,18 +41,35 @@ export default function BizOverviewPage() {
     if (!workspaceId) return;
     await decideApproval(workspaceId, approvalId, approve);
     load();
+    toast(approve ? "Approved." : "Declined.", "success");
   }
 
-  if (!workspaceId) return <div className="text-sm text-neutral-600">No business workspace selected.</div>;
-  if (loading) return <div className="text-sm text-neutral-600">Loading overview…</div>;
-  if (error || !data) return <div className="text-sm text-error">{error ?? "Something went wrong."}</div>;
+  if (!workspaceId) {
+    return <EmptyState icon="building" title="No business workspace selected" />;
+  }
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 max-w-[960px]">
+        <div className="flex flex-col gap-2">
+          <Skeleton variant="text" className="w-48 h-7" />
+          <Skeleton variant="text" className="w-56" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+        <SkeletonText lines={3} />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return <EmptyState icon="alert" title="Couldn't load business overview" description={error ?? "Something went wrong."} />;
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-[960px]">
-      <div>
-        <h1 className="text-2xl font-bold">{data.workspaceName}</h1>
-        <p className="text-sm text-neutral-600 mt-1">Business workspace overview.</p>
-      </div>
+      <PageHeader title={data.workspaceName} subtitle="Business workspace overview." />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {data.kpis.map((k, i) => (
@@ -62,7 +84,7 @@ export default function BizOverviewPage() {
       <div>
         <SectionKicker>Pending approvals</SectionKicker>
         {data.approvals.length === 0 ? (
-          <div className="text-sm text-neutral-600">No pending approvals.</div>
+          <EmptyState icon="check" title="No pending approvals" />
         ) : (
           <div className="flex flex-col gap-1">
             {data.approvals.map((a) => (
