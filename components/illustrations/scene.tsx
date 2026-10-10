@@ -23,7 +23,7 @@ function DotGrid({ light }: { light?: boolean }) {
 
 /** Small reusable side-view truck glyph reused wherever a scene needs to
  * point literally at "Instanta Logistics" rather than an abstract node. */
-function TruckGlyph({ x, y, scale = 1, color = "#017e84" }: { x: number; y: number; scale?: number; color?: string }) {
+export function TruckGlyph({ x, y, scale = 1, color = "#017e84" }: { x: number; y: number; scale?: number; color?: string }) {
   return (
     <g transform={`translate(${x},${y}) scale(${scale})`}>
       <rect x="0" y="4" width="28" height="16" rx="2.5" fill={color} />

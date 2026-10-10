@@ -9,6 +9,7 @@ import { Field, Input } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { trackDelivery, type Delivery, SPEEDS, WEIGHT_BANDS } from "@/lib/logistics";
 import { ApiError } from "@/lib/api";
+import { TruckGlyph } from "@/components/illustrations/scene";
 
 const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: string; icon: IconName }[] = [
   { key: "picked", label: "Picked up", icon: "package" },
@@ -18,6 +19,42 @@ const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: stri
 ];
 
 const STAGE_ORDER = ["picked", "transit", "out", "delivered"] as const;
+
+/** Fixed waypoints (in the map panel's 800x560 viewBox) tracing pickup to
+ * drop-off. The truck marker and the solid/dashed route split are both
+ * derived from this by walking `progress` (0 = just picked up, 1 = delivered)
+ * along the polyline, rather than a hardcoded midpoint. */
+const ROUTE_POINTS: [number, number][] = [
+  [120, 470],
+  [290, 350],
+  [470, 330],
+  [590, 300],
+  [610, 190],
+  [690, 110],
+];
+
+function pointAtProgress(points: [number, number][], t: number) {
+  const clamped = Math.min(Math.max(t, 0), 1);
+  const segLens = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
+  const total = segLens.reduce((a, b) => a + b, 0);
+  let target = total * clamped;
+  for (let i = 0; i < segLens.length; i++) {
+    const len = segLens[i];
+    if (target <= len || i === segLens.length - 1) {
+      const frac = len === 0 ? 0 : Math.min(target / len, 1);
+      const [x1, y1] = points[i];
+      const [x2, y2] = points[i + 1];
+      return { x: x1 + (x2 - x1) * frac, y: y1 + (y2 - y1) * frac, segmentIndex: i };
+    }
+    target -= len;
+  }
+  const [x, y] = points[points.length - 1];
+  return { x, y, segmentIndex: points.length - 2 };
+}
+
+function routePath(points: [number, number][]) {
+  return points.map((p, i) => `${i === 0 ? "M" : "L"}${p[0]} ${p[1]}`).join(" ");
+}
 
 function formatTime(iso: string | null) {
   if (!iso) return "—";
@@ -32,6 +69,18 @@ function formatDistanceLabel(weightBand?: string) {
 function TrackResult({ delivery }: { delivery: Delivery }) {
   const idx = STAGE_ORDER.indexOf(delivery.trackState as (typeof STAGE_ORDER)[number]);
   const speed = SPEEDS.find((s) => s.key === delivery.speed);
+
+  const delivered = delivery.trackState === "delivered";
+  const progress = delivered ? 1 : Math.max(idx, 0) / (STAGE_ORDER.length - 1);
+  const current = pointAtProgress(ROUTE_POINTS, progress);
+  const donePoints: [number, number][] = [
+    ...ROUTE_POINTS.slice(0, current.segmentIndex + 1),
+    [current.x, current.y],
+  ];
+  const remainingPoints: [number, number][] = [
+    [current.x, current.y],
+    ...ROUTE_POINTS.slice(current.segmentIndex + 1),
+  ];
 
   const timeline = [
     delivery.trackState === "delivered" && {
@@ -128,31 +177,40 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
             <path d="M260 0 L320 560" stroke="var(--color-neutral-300)" strokeWidth={12} fill="none" />
             <path d="M560 0 L620 560" stroke="var(--color-neutral-300)" strokeWidth={10} fill="none" />
             <path d="M0 140 Q400 200 800 120" stroke="var(--color-neutral-300)" strokeWidth={8} fill="none" />
-            <path d="M120 470 L290 350 L470 330 L590 300" stroke="var(--color-accent)" strokeWidth={4} fill="none" />
-            <path
-              d="M590 300 L610 190 L690 110"
-              stroke="var(--color-accent)"
-              strokeWidth={3}
-              strokeDasharray="8 7"
-              fill="none"
-            />
+            <path d={routePath(donePoints)} stroke="var(--color-accent)" strokeWidth={4} fill="none" />
+            {remainingPoints.length > 1 && (
+              <path
+                d={routePath(remainingPoints)}
+                stroke="var(--color-accent)"
+                strokeWidth={3}
+                strokeDasharray="8 7"
+                fill="none"
+              />
+            )}
+            {!delivered && (
+              <g style={{ transition: "transform 500ms ease" }}>
+                <circle cx={current.x} cy={current.y} r={26} fill="var(--color-accent)" opacity={0.22} />
+                <TruckGlyph x={current.x - 22 * 1.3} y={current.y - 13 * 1.3} scale={1.3} color="var(--color-accent-900)" />
+              </g>
+            )}
           </svg>
           <div className="absolute left-[15%] top-[84%] -translate-x-1/2 -translate-y-1/2 size-[18px] border-2 border-accent-800 bg-[var(--color-bg)]" />
           <div className="absolute left-[calc(15%+14px)] top-[calc(84%-10px)] text-xs bg-[var(--color-bg)] px-1.5 py-0.5 border border-divider rounded-xl">
             Pickup
           </div>
-          <div className="absolute left-[86%] top-[20%] -translate-x-1/2 -translate-y-1/2 size-5 bg-accent-800 text-white rounded-[10px] flex items-center justify-center">
-            <Icon name="pin" size={12} />
+          <div
+            className={`absolute left-[86%] top-[20%] -translate-x-1/2 -translate-y-1/2 size-5 text-white rounded-[10px] flex items-center justify-center ${
+              delivered ? "bg-[#28a745]" : "bg-accent-800"
+            }`}
+          >
+            <Icon name={delivered ? "check" : "pin"} size={12} />
           </div>
           <div className="absolute left-[calc(86%-140px)] top-[calc(20%-36px)] text-xs bg-[var(--color-bg)] px-1.5 py-0.5 border border-divider rounded-xl">
             Drop-off
           </div>
-          <div className="absolute left-[73.7%] top-[53.6%] -translate-x-1/2 -translate-y-1/2 size-9 bg-accent text-white rounded-[10px] flex items-center justify-center shadow-[0_0_0_8px_rgba(113,75,103,0.22)]">
-            <Icon name="truck" size={18} />
-          </div>
           <div className="absolute left-5 top-5 bg-[var(--color-bg)] border border-divider px-3.5 py-2.5 flex gap-2.5 items-center text-[13px] rounded-xl">
-            <span className="size-2 rounded-full bg-[#28a745]" />
-            Live · updated moments ago
+            <span className={`size-2 rounded-full ${delivered ? "bg-neutral-400" : "bg-[#28a745]"}`} />
+            {delivered ? "Delivered" : "Live · updated moments ago"}
           </div>
         </div>
 
