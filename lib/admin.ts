@@ -14,6 +14,8 @@ export type PermissionDomain =
   | "group"
   | "logistics"
   | "travels"
+  | "crypto"
+  | "dating"
   | "orders"
   | "finance"
   | "content"
@@ -274,6 +276,19 @@ export interface AdminFinance {
 
 export function getAdminFinance() {
   return apiFetch<AdminFinance>("/admin/finance");
+}
+
+// ---- Crypto ---------------------------------------------------------------------
+
+export interface AdminCrypto {
+  cryptoKpis: { l: string; v: string; d: string }[];
+  assetBreakdown: { icon: string; n: string; v: string; w: string; c: string }[];
+  txTypeBreakdown: { n: string; d: string; a: string; s: string; sbg: string; sfg: string }[];
+  cryptoTx: { id: string; d: string; c: string; b: string; icon: string; m: string; a: string; s: string; sbg: string; sfg: string }[];
+}
+
+export function getAdminCrypto() {
+  return apiFetch<AdminCrypto>("/admin/crypto");
 }
 
 // ---- Reports --------------------------------------------------------------------
