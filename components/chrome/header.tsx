@@ -15,7 +15,7 @@ import {
 } from "@/lib/businesses.config";
 import { useAuth } from "@/lib/auth-context";
 
-export type HeaderBusiness = "group" | "logistics" | "travels";
+export type HeaderBusiness = "group" | "logistics" | "travels" | "crypto" | "love";
 
 export function Header({
   business = "group",

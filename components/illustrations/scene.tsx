@@ -1,4 +1,4 @@
-type SceneVariant = "network" | "delivery" | "travel" | "growth" | "auth" | "horizon";
+type SceneVariant = "network" | "delivery" | "travel" | "growth" | "auth" | "horizon" | "crypto" | "love";
 
 const SCENE_BG: Record<SceneVariant, string> = {
   network: "linear-gradient(135deg, #f5eff4 0%, #ffffff 60%)",
@@ -7,6 +7,8 @@ const SCENE_BG: Record<SceneVariant, string> = {
   growth: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 60%)",
   auth: "linear-gradient(150deg, #241a21 0%, #4a2f3f 48%, #714b67 100%)",
   horizon: "linear-gradient(145deg, #eef6f5 0%, #f6eff4 55%, #ffffff 100%)",
+  crypto: "linear-gradient(150deg, #1a2420 0%, #1f3a33 55%, #0f7a63 100%)",
+  love: "linear-gradient(145deg, #2f1a22 0%, #5a2a3a 55%, #c2516f 100%)",
 };
 
 function DotGrid({ light }: { light?: boolean }) {
@@ -229,6 +231,77 @@ function HorizonArt() {
   );
 }
 
+function CryptoArt() {
+  return (
+    <svg viewBox="0 0 400 300" className="absolute inset-0 w-full h-full" fill="none">
+      {/* faint candlestick ticker in the backdrop */}
+      <path d="M20 220 h360" stroke="#5fcdb0" strokeOpacity="0.2" strokeWidth="1.5" />
+      <path d="M20 180 h360" stroke="#5fcdb0" strokeOpacity="0.14" strokeWidth="1.5" />
+      <path d="M20 140 h360" stroke="#5fcdb0" strokeOpacity="0.1" strokeWidth="1.5" />
+      <g stroke="#5fcdb0" strokeOpacity="0.5" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M50 230 v-40 M50 190 h0" />
+        <path d="M90 236 v-66" />
+        <path d="M130 214 v-30" />
+        <path d="M170 224 v-54" />
+      </g>
+      <rect x="44" y="196" width="12" height="20" rx="2" fill="#5fcdb0" fillOpacity="0.55" />
+      <rect x="84" y="178" width="12" height="36" rx="2" fill="#5fcdb0" fillOpacity="0.55" />
+      <rect x="124" y="188" width="12" height="20" rx="2" fill="#5fcdb0" fillOpacity="0.55" />
+      <rect x="164" y="182" width="12" height="30" rx="2" fill="#5fcdb0" fillOpacity="0.55" />
+      {/* upward trend line sweeping toward the coin */}
+      <path d="M44 232 L96 192 L136 198 L176 176 L232 140 L288 108" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="288" cy="108" r="5" fill="#ffffff" />
+      {/* the coin, centre stage */}
+      <circle cx="300" cy="90" r="46" fill="#0f7a63" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="2.5" />
+      <circle cx="300" cy="90" r="33" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="1.6" />
+      <path
+        d="M292 68 v10 M292 102 v10 M300 64 c14 0 14 13 2 14 c13 1 13 14 -2 14 h-14 M296 68 h8 M296 112 h8"
+        stroke="#ffffff"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+function LoveArt() {
+  return (
+    <svg viewBox="0 0 400 300" className="absolute inset-0 w-full h-full" fill="none">
+      {/* soft ambient sparkle */}
+      <circle cx="70" cy="56" r="1.6" fill="#ffffff" fillOpacity="0.55" />
+      <circle cx="330" cy="48" r="1.6" fill="#ffffff" fillOpacity="0.45" />
+      <circle cx="350" cy="220" r="1.6" fill="#ffffff" fillOpacity="0.4" />
+      {/* two profile cards drifting toward a match */}
+      <g transform="translate(60,96) rotate(-8)">
+        <rect x="0" y="0" width="92" height="118" rx="14" fill="#ffffff" fillOpacity="0.14" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1.6" />
+        <circle cx="46" cy="42" r="20" fill="#ffffff" fillOpacity="0.3" />
+        <rect x="18" y="76" width="56" height="8" rx="4" fill="#ffffff" fillOpacity="0.35" />
+        <rect x="26" y="90" width="40" height="6" rx="3" fill="#ffffff" fillOpacity="0.22" />
+      </g>
+      <g transform="translate(246,88) rotate(7)">
+        <rect x="0" y="0" width="92" height="118" rx="14" fill="#ffffff" fillOpacity="0.14" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="1.6" />
+        <circle cx="46" cy="42" r="20" fill="#ffffff" fillOpacity="0.3" />
+        <rect x="18" y="76" width="56" height="8" rx="4" fill="#ffffff" fillOpacity="0.35" />
+        <rect x="26" y="90" width="40" height="6" rx="3" fill="#ffffff" fillOpacity="0.22" />
+      </g>
+      {/* connecting spark */}
+      <path d="M152 150 C 175 130, 225 130, 248 150" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="2" strokeDasharray="2 8" strokeLinecap="round" />
+      {/* the heart, centred where the cards meet */}
+      <g transform="translate(200,168)">
+        <path
+          d="M0 20 C -26 -6 -46 10 -46 -12 C -46 -30 -24 -34 0 -10 C 24 -34 46 -30 46 -12 C 46 10 26 -6 0 20 Z"
+          fill="#c2516f"
+          stroke="#ffffff"
+          strokeOpacity="0.6"
+          strokeWidth="2"
+        />
+      </g>
+    </svg>
+  );
+}
+
 const SCENE_ART: Record<SceneVariant, () => React.JSX.Element> = {
   network: NetworkArt,
   delivery: DeliveryArt,
@@ -236,6 +309,8 @@ const SCENE_ART: Record<SceneVariant, () => React.JSX.Element> = {
   growth: GrowthArt,
   auth: AuthArt,
   horizon: HorizonArt,
+  crypto: CryptoArt,
+  love: LoveArt,
 };
 
 export function Scene({
@@ -249,7 +324,7 @@ export function Scene({
   return (
     <div className={className} style={{ background: SCENE_BG[variant] }}>
       <div className="relative w-full h-full">
-        <DotGrid light={variant === "travel" || variant === "auth"} />
+        <DotGrid light={variant === "travel" || variant === "auth" || variant === "crypto" || variant === "love"} />
         <Art />
       </div>
     </div>

@@ -35,7 +35,7 @@ export interface AccountOverview {
 }
 
 export interface ActivityRow {
-  vertical: "Delivery" | "Flight" | "Payment";
+  vertical: "Delivery" | "Flight" | "Payment" | "Crypto" | "Love";
   icon: string;
   ref: string;
   title: string;

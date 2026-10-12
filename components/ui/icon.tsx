@@ -57,6 +57,8 @@ import {
   EyeOff,
   Tag,
   Trash2,
+  Heart,
+  Bitcoin,
   type LucideProps,
 } from "lucide-react";
 
@@ -123,6 +125,8 @@ export const iconMap = {
   "eye-off": EyeOff,
   tag: Tag,
   trash: Trash2,
+  heart: Heart,
+  bitcoin: Bitcoin,
 } as const;
 
 export type IconName = keyof typeof iconMap;
