@@ -123,6 +123,58 @@ export const businesses: Business[] = [
       { label: "Travel assistance", href: "/support" },
     ],
   },
+  {
+    id: "crypto",
+    name: "CRYPTO",
+    label: "Instanta Crypto",
+    icon: "bitcoin",
+    status: "live",
+    tagline: "Trade crypto, cash out in Naira.",
+    href: "/crypto",
+    cta: { label: "Open exchange", href: "/crypto/exchange" },
+    exploreLabel: "Explore Crypto",
+    megaItems: [
+      { label: "Buy & sell", href: "/crypto/exchange" },
+      { label: "Swap", href: "/crypto/exchange?tab=swap" },
+      { label: "Send crypto", href: "/crypto/send" },
+      { label: "Receive crypto", href: "/crypto/receive" },
+    ],
+    subnav: [
+      { key: "home", label: "Overview", href: "/crypto" },
+      { key: "exchange", label: "Exchange", href: "/crypto/exchange" },
+      { key: "send", label: "Send", href: "/crypto/send" },
+      { key: "receive", label: "Receive", href: "/crypto/receive" },
+    ],
+    footerLinks: [
+      { label: "Open exchange", href: "/crypto/exchange" },
+      { label: "Send crypto", href: "/crypto/send" },
+      { label: "Receive crypto", href: "/crypto/receive" },
+    ],
+  },
+  {
+    id: "love",
+    name: "LOVE",
+    label: "Instanta Love",
+    icon: "heart",
+    status: "live",
+    tagline: "Meet someone new, today.",
+    href: "/love",
+    cta: { label: "Start matching", href: "/love/discover" },
+    exploreLabel: "Explore Love",
+    megaItems: [
+      { label: "Discover", href: "/love/discover" },
+      { label: "Your matches", href: "/love/matches" },
+    ],
+    subnav: [
+      { key: "home", label: "Overview", href: "/love" },
+      { key: "discover", label: "Discover", href: "/love/discover" },
+      { key: "matches", label: "Matches", href: "/love/matches" },
+    ],
+    footerLinks: [
+      { label: "Discover", href: "/love/discover" },
+      { label: "Your matches", href: "/love/matches" },
+    ],
+  },
 ];
 
 export const comingSoonBusinesses: ComingSoonBusiness[] = [

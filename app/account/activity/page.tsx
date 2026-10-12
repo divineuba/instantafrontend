@@ -9,13 +9,14 @@ import { SkeletonText } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getActivity, type ActivityResponse } from "@/lib/account";
 
-type Tab = "all" | "deliveries" | "flights" | "payments";
+type Tab = "all" | "deliveries" | "flights" | "payments" | "crypto";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "deliveries", label: "Deliveries" },
   { key: "flights", label: "Flights" },
   { key: "payments", label: "Payments" },
+  { key: "crypto", label: "Crypto" },
 ];
 
 function statusVariant(status: string): "success" | "warning" | "error" | "neutral" {
@@ -116,7 +117,7 @@ function ActivityBody() {
             {t.label}
             {data && t.key !== "all" && (
               <span className="ml-1.5 text-xs text-neutral-500">
-                ({data.counts[t.key === "deliveries" ? "deliveries" : t.key === "flights" ? "flights" : "payments"]})
+                ({data.counts[t.key]})
               </span>
             )}
             {data && t.key === "all" && (

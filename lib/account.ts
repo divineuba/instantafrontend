@@ -51,11 +51,11 @@ export function getOverview() {
 // ---- Activity ---------------------------------------------------------------
 
 export interface ActivityResponse {
-  counts: { all: number; deliveries: number; flights: number; payments: number };
+  counts: { all: number; deliveries: number; flights: number; payments: number; crypto: number };
   rows: ActivityRow[];
 }
 
-export function getActivity(tab: "all" | "deliveries" | "flights" | "payments" = "all") {
+export function getActivity(tab: "all" | "deliveries" | "flights" | "payments" | "crypto" = "all") {
   return apiFetch<ActivityResponse>(`/account/activity?tab=${tab}`);
 }
 

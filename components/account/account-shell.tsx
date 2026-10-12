@@ -25,6 +25,8 @@ const PERSONAL_NAV: NavItem[] = [
   { href: "/account/activity", label: "Activity", icon: "activity" },
   { href: "/account/trips", label: "Trips", icon: "plane" },
   { href: "/account/payments", label: "Payments", icon: "wallet" },
+  { href: "/account/crypto", label: "Crypto", icon: "bitcoin" },
+  { href: "/account/love", label: "Love", icon: "heart" },
   { href: "/account/notifications", label: "Notifications", icon: "bell" },
   { href: "/account/support", label: "Support", icon: "chat" },
   { href: "/account/profile", label: "Profile", icon: "user" },

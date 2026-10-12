@@ -160,7 +160,7 @@ export default function Home() {
             <div>
               <SectionKicker>01 Our businesses</SectionKicker>
               <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-xl">
-                Two businesses today. Built for many more.
+                Four businesses today. Built for many more.
               </h2>
             </div>
             <LinkButton href="/services" variant="ghost">
@@ -174,7 +174,17 @@ export default function Home() {
                 <article className="rounded-lg border border-divider bg-card overflow-hidden flex flex-col">
                   <div className="aspect-[16/7] border-b border-divider relative">
                     <Scene
-                      variant={b.id === "logistics" ? "delivery" : "travel"}
+                      variant={
+                        b.id === "logistics"
+                          ? "delivery"
+                          : b.id === "travels"
+                            ? "travel"
+                            : b.id === "crypto"
+                              ? "crypto"
+                              : b.id === "love"
+                                ? "love"
+                                : "travel"
+                      }
                       className="absolute inset-0"
                     />
                   </div>
@@ -188,7 +198,11 @@ export default function Home() {
                     <p className="text-[15px] text-neutral-700 max-w-md">
                       {b.id === "logistics"
                         ? "Reliable delivery and logistics services designed for individuals and businesses."
-                        : "Flight booking and travel services designed to make every trip easier."}
+                        : b.id === "travels"
+                          ? "Flight booking and travel services designed to make every trip easier."
+                          : b.id === "crypto"
+                            ? "Buy, sell, swap and send crypto with live prices and instant Naira withdrawal."
+                            : "Meet people nearby, match, and start chatting in one app."}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {b.megaItems.slice(0, 4).map((m) => (
