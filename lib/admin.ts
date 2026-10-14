@@ -291,6 +291,19 @@ export function getAdminCrypto() {
   return apiFetch<AdminCrypto>("/admin/crypto");
 }
 
+// ---- Dating (Love) ---------------------------------------------------------------
+
+export interface AdminDating {
+  datingKpis: { l: string; v: string; d: string }[];
+  genderBreakdown: { icon: string; n: string; v: string; w: string; c: string }[];
+  activityBreakdown: { n: string; d: string; a: string; s: string; sbg: string; sfg: string }[];
+  datingRows: { id: string; d: string; c: string; icon: string; m: string; a: string; s: string; sbg: string; sfg: string }[];
+}
+
+export function getAdminDating() {
+  return apiFetch<AdminDating>("/admin/dating");
+}
+
 // ---- Reports --------------------------------------------------------------------
 
 export interface AdminReports {
