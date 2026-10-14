@@ -13,6 +13,7 @@ import {
   searchFlights,
   minutesToHm,
   fmtUsd,
+  defaultDepartDate,
   type FlightSort,
   type SearchFlightsResponse,
 } from "@/lib/travels";
@@ -33,7 +34,7 @@ function ResultsBody() {
   const to = searchParams.get("to") ?? "London · LHR";
   const origin = searchParams.get("origin") ?? "LOS";
   const destination = searchParams.get("destination") ?? "LHR";
-  const departDate = searchParams.get("departDate") ?? "2026-10-12";
+  const departDate = searchParams.get("departDate") ?? defaultDepartDate();
   const returnDate = searchParams.get("returnDate") ?? "";
 
   const [sort, setSort] = React.useState<FlightSort>("recommended");

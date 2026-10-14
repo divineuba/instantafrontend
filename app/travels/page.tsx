@@ -11,7 +11,13 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { Icon } from "@/components/ui/icon";
 import { Tag } from "@/components/ui/tag";
-import { getPopularRoutes, TRAVEL_WHY, type PopularRoute } from "@/lib/travels";
+import {
+  getPopularRoutes,
+  defaultDepartDate,
+  defaultReturnDate,
+  TRAVEL_WHY,
+  type PopularRoute,
+} from "@/lib/travels";
 
 type TripType = "return" | "oneway" | "multicity";
 
@@ -27,12 +33,22 @@ export default function TravelsHomePage() {
   const [direct, setDirect] = React.useState(false);
   const [from, setFrom] = React.useState("Lagos · LOS");
   const [to, setTo] = React.useState("London · LHR");
-  const [departDate, setDepartDate] = React.useState("2026-10-12");
-  const [returnDate, setReturnDate] = React.useState("2026-10-25");
+  const [departDate, setDepartDate] = React.useState("");
+  const [returnDate, setReturnDate] = React.useState("");
   const [adults, setAdults] = React.useState(1);
   const [cabinClass, setCabinClass] = React.useState("Economy");
   const [routes, setRoutes] = React.useState<PopularRoute[]>([]);
   const [routesLoading, setRoutesLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    // `new Date()` is an unstable value during static prerendering, so the
+    // "today"-relative defaults are computed here on mount rather than in
+    // the useState initializer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDepartDate(defaultDepartDate());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReturnDate(defaultReturnDate());
+  }, []);
 
   React.useEffect(() => {
     // Loading the popular-routes strip from the server and flagging it as

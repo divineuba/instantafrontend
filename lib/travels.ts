@@ -97,6 +97,22 @@ export function getPopularRoutes() {
   return apiFetch<PopularRoute[]>("/flights/routes");
 }
 
+/** Live search providers reject past departure dates, so defaults need to
+ * float with "today" rather than being a fixed string. */
+function isoDatePlusDays(days: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+export function defaultDepartDate() {
+  return isoDatePlusDays(30);
+}
+
+export function defaultReturnDate() {
+  return isoDatePlusDays(44);
+}
+
 export function searchFlights(params: SearchFlightsParams = {}) {
   const qs = new URLSearchParams();
   if (params.origin) qs.set("origin", params.origin);
