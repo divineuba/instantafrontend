@@ -1,8 +1,16 @@
 # Integration seams
 
-One thing in this repo stands in for a real third-party integration, built as a swappable interface so wiring in the real provider later is a one-file change. See `backend/INTEGRATIONS.md` for the payment-gateway and transactional-email seams, which live in the backend repo.
+See `backend/INTEGRATIONS.md` for the payment-gateway, email, flight-search, object-storage, geocoding and FX-rate seams, which live in the backend repo.
 
-## Geocoding / distance
+## Map tiles — Mapbox GL
+
+**Where:** `NEXT_PUBLIC_MAPBOX_TOKEN` env var, consumed by `mapbox-gl`/`react-map-gl` on the Logistics tracking page once that phase lands.
+
+Same Mapbox account as the backend's `MAPBOX_ACCESS_TOKEN` (`backend/INTEGRATIONS.md`) — sign up free at https://account.mapbox.com and create a token scoped to this app's domain. The frontend token is a public, domain-restricted token (safe to ship to the browser); it is separate from the backend's secret token, which calls the Geocoding/Directions APIs server-side.
+
+## Geocoding / distance (superseded by backend Mapbox seam)
+
+This local heuristic is being replaced by the backend's `GeocodingProvider`/Mapbox seam (`backend/INTEGRATIONS.md`) as part of the Logistics real-map phase — once that lands, `delivery.service.ts` will compute distance/route server-side instead of trusting a client-supplied estimate. Documented here until that phase replaces it.
 
 **Where:** `lib/logistics.ts` — `DistanceProvider` interface, `HeuristicZoneDistanceProvider` implementation, `distanceProvider` export.
 
