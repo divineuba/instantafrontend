@@ -304,6 +304,48 @@ export function getAdminDating() {
   return apiFetch<AdminDating>("/admin/dating");
 }
 
+export interface AdminDatingPhoto {
+  id: string;
+  url: string;
+  displayName: string;
+  userId: string;
+  city: string;
+  submittedAt: string;
+}
+
+export function getAdminDatingPhotoQueue() {
+  return apiFetch<AdminDatingPhoto[]>("/admin/dating/photos");
+}
+
+export function moderateAdminDatingPhoto(id: string, action: "APPROVE" | "REJECT") {
+  return apiFetch<unknown>(`/admin/dating/photos/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ action }),
+  });
+}
+
+export interface AdminDatingReport {
+  id: string;
+  reporterId: string;
+  reportedId: string;
+  reporterName: string;
+  reportedName: string;
+  reason: string;
+  details: string | null;
+  createdAt: string;
+}
+
+export function getAdminDatingReportQueue() {
+  return apiFetch<AdminDatingReport[]>("/admin/dating/reports");
+}
+
+export function resolveAdminDatingReport(id: string, action: "DISMISS" | "WARN" | "SUSPEND", note?: string) {
+  return apiFetch<unknown>(`/admin/dating/reports/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ action, note }),
+  });
+}
+
 // ---- Reports --------------------------------------------------------------------
 
 export interface AdminReports {

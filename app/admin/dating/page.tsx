@@ -5,10 +5,187 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { Card, CardKicker, CardTitle, CardBody } from "@/components/ui/card";
 import { Table, Thead, Th, Tbody, Tr, Td } from "@/components/ui/table";
 import { Tag } from "@/components/ui/tag";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonTableRows } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getAdminDating, type AdminDating } from "@/lib/admin";
+import { useToast } from "@/lib/toast-context";
+import {
+  getAdminDating,
+  getAdminDatingPhotoQueue,
+  moderateAdminDatingPhoto,
+  getAdminDatingReportQueue,
+  resolveAdminDatingReport,
+  type AdminDating,
+  type AdminDatingPhoto,
+  type AdminDatingReport,
+} from "@/lib/admin";
+
+function PhotoQueue() {
+  const toast = useToast();
+  const [photos, setPhotos] = React.useState<AdminDatingPhoto[] | null>(null);
+  const [busyId, setBusyId] = React.useState<string | null>(null);
+
+  const load = React.useCallback(() => {
+    getAdminDatingPhotoQueue().then(setPhotos);
+  }, []);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handle(id: string, action: "APPROVE" | "REJECT") {
+    setBusyId(id);
+    try {
+      await moderateAdminDatingPhoto(id, action);
+      setPhotos((prev) => (prev ? prev.filter((p) => p.id !== id) : prev));
+      toast(action === "APPROVE" ? "Photo approved." : "Photo rejected.", "success");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div>
+      <CardKicker>Photo moderation queue</CardKicker>
+      {!photos ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-2.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-lg" />
+          ))}
+        </div>
+      ) : photos.length === 0 ? (
+        <div className="mt-2.5">
+          <EmptyState icon="check" title="Nothing pending" description="All submitted photos have been reviewed." />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-2.5">
+          {photos.map((p) => (
+            <Card key={p.id} className="gap-2.5 !p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.url} alt={p.displayName} className="w-full h-40 object-cover rounded-md" />
+              <div className="text-sm font-medium">{p.displayName}</div>
+              <div className="text-xs text-neutral-600">{p.city} · {p.submittedAt}</div>
+              <div className="flex gap-2 mt-1">
+                <Button
+                  variant="secondary"
+                  className="!px-3 !py-1.5 text-xs flex-1"
+                  disabled={busyId === p.id}
+                  onClick={() => handle(p.id, "REJECT")}
+                >
+                  Reject
+                </Button>
+                <Button
+                  variant="primary"
+                  className="!px-3 !py-1.5 text-xs flex-1"
+                  disabled={busyId === p.id}
+                  onClick={() => handle(p.id, "APPROVE")}
+                >
+                  Approve
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReportQueue() {
+  const toast = useToast();
+  const [reports, setReports] = React.useState<AdminDatingReport[] | null>(null);
+  const [busyId, setBusyId] = React.useState<string | null>(null);
+
+  const load = React.useCallback(() => {
+    getAdminDatingReportQueue().then(setReports);
+  }, []);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handle(id: string, action: "DISMISS" | "WARN" | "SUSPEND") {
+    setBusyId(id);
+    try {
+      await resolveAdminDatingReport(id, action);
+      setReports((prev) => (prev ? prev.filter((r) => r.id !== id) : prev));
+      toast(
+        action === "DISMISS" ? "Report dismissed." : action === "WARN" ? "User warned." : "Profile suspended.",
+        "success",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div>
+      <CardKicker>Reports</CardKicker>
+      <Table className="mt-2.5">
+        <Thead>
+          <Tr>
+            <Th>Reported</Th>
+            <Th>Reported by</Th>
+            <Th>Reason</Th>
+            <Th>Details</Th>
+            <Th>Date</Th>
+            <Th>Action</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {!reports && <SkeletonTableRows rows={3} columns={6} />}
+          {reports?.map((r) => (
+            <Tr key={r.id}>
+              <Td className="font-medium">{r.reportedName}</Td>
+              <Td>{r.reporterName}</Td>
+              <Td>
+                <Tag>{r.reason}</Tag>
+              </Td>
+              <Td className="max-w-[220px] truncate text-neutral-600">{r.details ?? "—"}</Td>
+              <Td>{r.createdAt}</Td>
+              <Td>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant="secondary"
+                    className="!px-2.5 !py-1 text-xs"
+                    disabled={busyId === r.id}
+                    onClick={() => handle(r.id, "DISMISS")}
+                  >
+                    Dismiss
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="!px-2.5 !py-1 text-xs"
+                    disabled={busyId === r.id}
+                    onClick={() => handle(r.id, "WARN")}
+                  >
+                    Warn
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="!px-2.5 !py-1 text-xs"
+                    disabled={busyId === r.id}
+                    onClick={() => handle(r.id, "SUSPEND")}
+                  >
+                    Suspend
+                  </Button>
+                </div>
+              </Td>
+            </Tr>
+          ))}
+          {reports?.length === 0 && (
+            <Tr>
+              <Td colSpan={6} className="p-0">
+                <EmptyState icon="check" title="No open reports" />
+              </Td>
+            </Tr>
+          )}
+        </Tbody>
+      </Table>
+    </div>
+  );
+}
 
 export default function AdminDatingPage() {
   const [data, setData] = React.useState<AdminDating | null>(null);
@@ -146,6 +323,9 @@ export default function AdminDatingPage() {
               </Tbody>
             </Table>
           </div>
+
+          <PhotoQueue />
+          <ReportQueue />
         </>
       )}
     </div>
