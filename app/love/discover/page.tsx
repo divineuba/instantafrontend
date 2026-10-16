@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/icon";
 import { SwipeDeck } from "@/components/love/swipe-deck";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
+import { getDatingSocket, type MatchNewEvent } from "@/lib/dating-socket";
 import {
   getMyProfile,
   createProfile,
@@ -22,7 +23,10 @@ import {
   type DatingProfile,
   type Gender,
   type InterestedIn,
+  type SwipeDirection,
 } from "@/lib/dating";
+
+const LOW_FEED_THRESHOLD = 4;
 
 function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => void }) {
   const [form, setForm] = React.useState({
@@ -32,6 +36,7 @@ function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => voi
     gender: "female" as Gender,
     interestedIn: "everyone" as InterestedIn,
     city: "",
+    interests: "",
   });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -53,7 +58,12 @@ function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => voi
           }
           setBusy(true);
           setError(null);
-          createProfile(form)
+          const interests = form.interests
+            .split(",")
+            .map((i) => i.trim())
+            .filter(Boolean)
+            .slice(0, 10);
+          createProfile({ ...form, interests })
             .then(onCreated)
             .catch((err) => setError(err instanceof ApiError ? err.message : "Couldn't save your profile."))
             .finally(() => setBusy(false));
@@ -109,6 +119,13 @@ function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => voi
             placeholder="A couple of lines about you"
           />
         </Field>
+        <Field label="Interests (comma separated)">
+          <Input
+            value={form.interests}
+            onChange={(e) => setForm({ ...form, interests: e.target.value })}
+            placeholder="hiking, jazz, cooking"
+          />
+        </Field>
         <Button type="submit" disabled={busy}>
           {busy ? "Saving…" : "Create profile"}
         </Button>
@@ -124,8 +141,11 @@ export default function LoveDiscoverPage() {
 
   const [profile, setProfile] = React.useState<DatingProfile | null | undefined>(undefined);
   const [feed, setFeed] = React.useState<DatingProfile[] | null>(null);
+  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [superlikesRemaining, setSuperlikesRemaining] = React.useState(0);
   const [match, setMatch] = React.useState<{ name: string; matchId: string } | null>(null);
 
   React.useEffect(() => {
@@ -135,12 +155,49 @@ export default function LoveDiscoverPage() {
 
   React.useEffect(() => {
     if (!profile) return;
-    discover().then(setFeed);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSuperlikesRemaining(profile.superlikesRemaining);
+    discover().then((result) => {
+      setFeed(result.profiles);
+      setNextCursor(result.nextCursor);
+    });
   }, [profile]);
 
-  function handleSwipe(target: DatingProfile, direction: "LIKE" | "PASS") {
+  React.useEffect(() => {
+    if (!user) return;
+    const userId = user.id;
+    const socket = getDatingSocket();
+    function onMatchNew(event: MatchNewEvent) {
+      const otherUserId = event.userAId === userId ? event.userBId : event.userAId;
+      setFeed((f) => (f ? f.filter((p) => p.userId !== otherUserId) : f));
+      setMatch({ name: "Someone", matchId: event.matchId });
+    }
+    socket.on("match:new", onMatchNew);
+    return () => {
+      socket.off("match:new", onMatchNew);
+    };
+  }, [user]);
+
+  const loadMore = React.useCallback(() => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    discover(nextCursor)
+      .then((result) => {
+        setFeed((f) => [...(f ?? []), ...result.profiles]);
+        setNextCursor(result.nextCursor);
+      })
+      .finally(() => setLoadingMore(false));
+  }, [nextCursor, loadingMore]);
+
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (feed && feed.length <= LOW_FEED_THRESHOLD) loadMore();
+  }, [feed, loadMore]);
+
+  function handleSwipe(target: DatingProfile, direction: SwipeDirection) {
     setBusy(true);
     setError(null);
+    if (direction === "SUPERLIKE") setSuperlikesRemaining((n) => Math.max(0, n - 1));
     swipe(target.userId, direction)
       .then((result) => {
         setFeed((f) => (f ? f.filter((p) => p.userId !== target.userId) : f));
@@ -148,7 +205,10 @@ export default function LoveDiscoverPage() {
           setMatch({ name: target.displayName, matchId: result.matchId });
         }
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "That didn't go through."))
+      .catch((err) => {
+        if (direction === "SUPERLIKE") setSuperlikesRemaining((n) => n + 1);
+        setError(err instanceof ApiError ? err.message : "That didn't go through.");
+      })
       .finally(() => setBusy(false));
   }
 
@@ -181,9 +241,14 @@ export default function LoveDiscoverPage() {
             <>
               {error && <div className="text-sm text-error">{error}</div>}
               {!feed ? (
-                <Skeleton className="h-[420px] w-full max-w-[380px] rounded-2xl" />
+                <Skeleton className="h-[460px] w-full max-w-[380px] rounded-2xl" />
               ) : (
-                <SwipeDeck profiles={feed} busy={busy} onSwipe={handleSwipe} />
+                <SwipeDeck
+                  profiles={feed}
+                  busy={busy}
+                  superlikesRemaining={superlikesRemaining}
+                  onSwipe={handleSwipe}
+                />
               )}
             </>
           )}

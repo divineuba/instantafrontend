@@ -71,8 +71,15 @@ export default function LoveMatchesPage() {
                   href={`/love/matches/${m.id}`}
                   className="flex items-center gap-3.5 p-3.5 bg-card border border-divider rounded-lg no-underline text-text hover:border-neutral-300 hover:shadow-md transition-[box-shadow,border-color] duration-150"
                 >
-                  <span className="size-12 shrink-0 grid place-items-center bg-accent-100 text-accent-700 rounded-full font-semibold">
-                    {m.otherUser ? initials(m.otherUser.displayName) : <Icon name="user" size={18} />}
+                  <span className="size-12 shrink-0 grid place-items-center bg-accent-100 text-accent-700 rounded-full font-semibold overflow-hidden">
+                    {m.otherUser?.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.otherUser.photoUrl} alt={m.otherUser.displayName} className="w-full h-full object-cover" />
+                    ) : m.otherUser ? (
+                      initials(m.otherUser.displayName)
+                    ) : (
+                      <Icon name="user" size={18} />
+                    )}
                   </span>
                   <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                     <span className="font-semibold">{m.otherUser?.displayName ?? "Instanta user"}</span>
@@ -80,6 +87,11 @@ export default function LoveMatchesPage() {
                       {m.lastMessage ? m.lastMessage.body : "Say hello — you matched!"}
                     </span>
                   </div>
+                  {m.unreadCount > 0 && (
+                    <span className="size-5 shrink-0 grid place-items-center bg-accent text-white rounded-full text-[11px] font-semibold">
+                      {m.unreadCount > 9 ? "9+" : m.unreadCount}
+                    </span>
+                  )}
                   <Icon name="right" size={16} className="text-neutral-400 shrink-0" />
                 </a>
               ))}

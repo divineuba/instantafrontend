@@ -16,12 +16,21 @@ import {
   getMyProfile,
   updateProfile,
   getMatches,
+  presignPhotoUpload,
+  addPhoto,
+  deletePhoto,
+  reorderPhotos,
+  listBlocks,
+  unblockUser,
   ageFromBirthdate,
   type DatingProfile,
   type MatchRow,
+  type DatingBlock,
   type Gender,
   type InterestedIn,
 } from "@/lib/dating";
+
+const MAX_PHOTOS = 6;
 
 function initials(name: string) {
   return name
@@ -35,26 +44,54 @@ function initials(name: string) {
 export default function AccountLovePage() {
   const [profile, setProfile] = React.useState<DatingProfile | null | undefined>(undefined);
   const [matches, setMatches] = React.useState<MatchRow[] | null>(null);
+  const [blocks, setBlocks] = React.useState<DatingBlock[] | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [form, setForm] = React.useState<{ displayName: string; bio: string; city: string; gender: Gender; interestedIn: InterestedIn }>({
+  const [photoBusy, setPhotoBusy] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [form, setForm] = React.useState<{
+    displayName: string;
+    bio: string;
+    city: string;
+    gender: Gender;
+    interestedIn: InterestedIn;
+    interests: string;
+    minAgePref: string;
+    maxAgePref: string;
+    maxDistanceKm: string;
+  }>({
     displayName: "",
     bio: "",
     city: "",
     gender: "female",
     interestedIn: "everyone",
+    interests: "",
+    minAgePref: "",
+    maxAgePref: "",
+    maxDistanceKm: "",
   });
   const toast = useToast();
 
   const load = React.useCallback(() => {
     setLoading(true);
-    Promise.all([getMyProfile(), getMatches()])
-      .then(([p, m]) => {
+    Promise.all([getMyProfile(), getMatches(), listBlocks()])
+      .then(([p, m, b]) => {
         setProfile(p);
         setMatches(m);
+        setBlocks(b);
         if (p) {
-          setForm({ displayName: p.displayName, bio: p.bio, city: p.city, gender: p.gender, interestedIn: p.interestedIn });
+          setForm({
+            displayName: p.displayName,
+            bio: p.bio,
+            city: p.city,
+            gender: p.gender,
+            interestedIn: p.interestedIn,
+            interests: p.interests.join(", "),
+            minAgePref: p.minAgePref != null ? String(p.minAgePref) : "",
+            maxAgePref: p.maxAgePref != null ? String(p.maxAgePref) : "",
+            maxDistanceKm: p.maxDistanceKm != null ? String(p.maxDistanceKm) : "",
+          });
         }
       })
       .catch(() => setError("Couldn't load your Love account."))
@@ -62,7 +99,7 @@ export default function AccountLovePage() {
   }, []);
 
   React.useEffect(() => {
-    // Loading profile/matches from the server on mount is a genuine
+    // Loading profile/matches/blocks from the server on mount is a genuine
     // sync-with-external-system effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
@@ -71,7 +108,21 @@ export default function AccountLovePage() {
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    updateProfile(form)
+    updateProfile({
+      displayName: form.displayName,
+      bio: form.bio,
+      city: form.city,
+      gender: form.gender,
+      interestedIn: form.interestedIn,
+      interests: form.interests
+        .split(",")
+        .map((i) => i.trim())
+        .filter(Boolean)
+        .slice(0, 10),
+      minAgePref: form.minAgePref ? Number(form.minAgePref) : undefined,
+      maxAgePref: form.maxAgePref ? Number(form.maxAgePref) : undefined,
+      maxDistanceKm: form.maxDistanceKm ? Number(form.maxDistanceKm) : undefined,
+    })
       .then((p) => {
         setProfile(p);
         toast("Profile updated.", "success");
@@ -90,6 +141,58 @@ export default function AccountLovePage() {
       })
       .catch((err) => toast(err instanceof ApiError ? err.message : "Couldn't update visibility.", "error"))
       .finally(() => setBusy(false));
+  }
+
+  function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !profile) return;
+    setPhotoBusy(true);
+    presignPhotoUpload(file.type)
+      .then(async ({ uploadUrl, key, publicUrl }) => {
+        const putRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!putRes.ok) throw new Error("Upload failed");
+        return addPhoto({ key, url: publicUrl });
+      })
+      .then((photo) => {
+        setProfile((p) => (p ? { ...p, photos: [...p.photos, photo] } : p));
+      })
+      .catch((err) => toast(err instanceof ApiError ? err.message : "Couldn't upload photo.", "error"))
+      .finally(() => setPhotoBusy(false));
+  }
+
+  function handleDeletePhoto(photoId: string) {
+    if (!profile) return;
+    setPhotoBusy(true);
+    deletePhoto(photoId)
+      .then(() => setProfile((p) => (p ? { ...p, photos: p.photos.filter((ph) => ph.id !== photoId) } : p)))
+      .catch((err) => toast(err instanceof ApiError ? err.message : "Couldn't delete photo.", "error"))
+      .finally(() => setPhotoBusy(false));
+  }
+
+  function movePhoto(photoId: string, direction: -1 | 1) {
+    if (!profile) return;
+    const index = profile.photos.findIndex((p) => p.id === photoId);
+    const swapWith = index + direction;
+    if (index < 0 || swapWith < 0 || swapWith >= profile.photos.length) return;
+    const reordered = [...profile.photos];
+    [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
+    setProfile({ ...profile, photos: reordered });
+    setPhotoBusy(true);
+    reorderPhotos(reordered.map((p) => p.id))
+      .then((photos) => setProfile((p) => (p ? { ...p, photos } : p)))
+      .catch((err) => toast(err instanceof ApiError ? err.message : "Couldn't reorder photos.", "error"))
+      .finally(() => setPhotoBusy(false));
+  }
+
+  function handleUnblock(targetUserId: string) {
+    unblockUser(targetUserId)
+      .then(() => setBlocks((b) => (b ? b.filter((x) => x.blockedId !== targetUserId) : b)))
+      .catch((err) => toast(err instanceof ApiError ? err.message : "Couldn't unblock.", "error"));
   }
 
   if (loading) {
@@ -130,8 +233,13 @@ export default function AccountLovePage() {
         <SectionKicker>Your profile</SectionKicker>
         <Card className="gap-4">
           <div className="flex items-center gap-3">
-            <span className="size-14 shrink-0 grid place-items-center bg-accent-100 text-accent-700 rounded-full text-lg font-semibold">
-              {initials(profile.displayName)}
+            <span className="size-14 shrink-0 grid place-items-center bg-accent-100 text-accent-700 rounded-full text-lg font-semibold overflow-hidden">
+              {profile.photos[0]?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.photos[0].url} alt={profile.displayName} className="w-full h-full object-cover" />
+              ) : (
+                initials(profile.displayName)
+              )}
             </span>
             <div>
               <CardTitle>
@@ -142,6 +250,71 @@ export default function AccountLovePage() {
             <Button variant="secondary" className="ml-auto" disabled={busy} onClick={toggleActive}>
               {profile.isActive ? "Hide from Discover" : "Show in Discover"}
             </Button>
+          </div>
+
+          <div className="pt-2 border-t border-divider flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Photos ({profile.photos.length}/{MAX_PHOTOS})</span>
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoFile} />
+              <Button
+                variant="secondary"
+                disabled={photoBusy || profile.photos.length >= MAX_PHOTOS}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {photoBusy ? "Uploading…" : "Add photo"}
+              </Button>
+            </div>
+            {profile.photos.length === 0 ? (
+              <p className="text-sm text-neutral-600 m-0">No photos yet — add one so people can see you.</p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {profile.photos.map((photo, i) => (
+                  <div key={photo.id} className="relative aspect-square rounded-md overflow-hidden border border-divider group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo.url} alt="" className="w-full h-full object-cover" />
+                    {photo.status === "PENDING" && (
+                      <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-warning text-white font-medium">
+                        Pending
+                      </span>
+                    )}
+                    {photo.status === "REJECTED" && (
+                      <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-error text-white font-medium">
+                        Rejected
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity py-1">
+                      <button
+                        type="button"
+                        className="text-white p-0.5 disabled:opacity-30"
+                        disabled={i === 0 || photoBusy}
+                        onClick={() => movePhoto(photo.id, -1)}
+                        aria-label="Move earlier"
+                      >
+                        <Icon name="back" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="text-white p-0.5 disabled:opacity-30"
+                        disabled={photoBusy}
+                        onClick={() => handleDeletePhoto(photo.id)}
+                        aria-label="Delete photo"
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="text-white p-0.5 disabled:opacity-30"
+                        disabled={i === profile.photos.length - 1 || photoBusy}
+                        onClick={() => movePhoto(photo.id, 1)}
+                        aria-label="Move later"
+                      >
+                        <Icon name="right" size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSave} className="flex flex-col gap-3 pt-2 border-t border-divider">
@@ -166,6 +339,20 @@ export default function AccountLovePage() {
             <Field label="About you">
               <Textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
             </Field>
+            <Field label="Interests (comma separated)">
+              <Input value={form.interests} onChange={(e) => setForm({ ...form, interests: e.target.value })} placeholder="hiking, jazz, cooking" />
+            </Field>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Min age">
+                <Input type="number" min={18} max={99} value={form.minAgePref} onChange={(e) => setForm({ ...form, minAgePref: e.target.value })} />
+              </Field>
+              <Field label="Max age">
+                <Input type="number" min={18} max={99} value={form.maxAgePref} onChange={(e) => setForm({ ...form, maxAgePref: e.target.value })} />
+              </Field>
+              <Field label="Max distance (km)">
+                <Input type="number" min={1} max={500} value={form.maxDistanceKm} onChange={(e) => setForm({ ...form, maxDistanceKm: e.target.value })} />
+              </Field>
+            </div>
             <Button type="submit" disabled={busy} className="self-end">
               {busy ? "Saving…" : "Save changes"}
             </Button>
@@ -190,8 +377,15 @@ export default function AccountLovePage() {
                 href={`/love/matches/${m.id}`}
                 className="flex items-center gap-3 p-3 bg-card border border-divider rounded-lg no-underline text-text hover:border-neutral-300 transition-colors duration-150"
               >
-                <span className="size-10 shrink-0 grid place-items-center bg-accent-100 text-accent-700 rounded-full font-semibold text-sm">
-                  {m.otherUser ? initials(m.otherUser.displayName) : <Icon name="user" size={14} />}
+                <span className="size-10 shrink-0 grid place-items-center bg-accent-100 text-accent-700 rounded-full font-semibold text-sm overflow-hidden">
+                  {m.otherUser?.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.otherUser.photoUrl} alt={m.otherUser.displayName} className="w-full h-full object-cover" />
+                  ) : m.otherUser ? (
+                    initials(m.otherUser.displayName)
+                  ) : (
+                    <Icon name="user" size={14} />
+                  )}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{m.otherUser?.displayName ?? "Instanta user"}</div>
@@ -204,6 +398,22 @@ export default function AccountLovePage() {
           </div>
         )}
       </div>
+
+      {blocks && blocks.length > 0 && (
+        <div>
+          <SectionKicker>Blocked users</SectionKicker>
+          <div className="flex flex-col gap-2">
+            {blocks.map((b) => (
+              <div key={b.id} className="flex items-center gap-3 p-3 bg-card border border-divider rounded-lg">
+                <span className="flex-1 text-sm text-neutral-600">Blocked on {new Date(b.createdAt).toLocaleDateString()}</span>
+                <Button variant="secondary" onClick={() => handleUnblock(b.blockedId)}>
+                  Unblock
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
