@@ -25,3 +25,15 @@ export function connectTrackingSocket(trackingId: string, phone?: string): Socke
     auth: { trackingId, phone },
   });
 }
+
+/** Opens a connection for an admin console session: no trackingId/phone in
+ * the handshake, since the backend's gateway auto-joins any cookie-admin to
+ * the global ops room, which rebroadcasts every delivery's `delivery:update`
+ * and `chat:new` events — one connection covers the whole fleet. Callers
+ * must disconnect() it on unmount. */
+export function connectAdminOpsSocket(): Socket {
+  return io(`${API_BASE_URL}/logistics`, {
+    withCredentials: true,
+    transports: ["websocket", "polling"],
+  });
+}

@@ -19,6 +19,7 @@ import {
   WEIGHT_BANDS,
 } from "@/lib/logistics";
 import { connectTrackingSocket, type DeliveryUpdateEvent, type ChatNewEvent } from "@/lib/logistics-socket";
+import { STAGE_ORDER, STATUS_TO_STAGE, progressForStage, pointAtProgress } from "@/lib/route-geo";
 import { ApiError } from "@/lib/api";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -30,43 +31,10 @@ const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: stri
   { key: "delivered", label: "Delivered", icon: "check" },
 ];
 
-const STAGE_ORDER = ["picked", "transit", "out", "delivered"] as const;
-
 /** Mirrors the backend's status→trackState mapping so a socket-pushed status
  * (which only carries the raw enum) can be folded into the UI's stage model
  * without a full refetch. */
-const STATUS_TO_TRACK_STATE: Record<DeliveryStatusKey, Delivery["trackState"]> = {
-  PENDING: "picked",
-  PICKED_UP: "picked",
-  IN_TRANSIT: "transit",
-  OUT_FOR_DELIVERY: "out",
-  DELIVERED: "delivered",
-  CANCELLED: "notfound",
-};
-
-/** Walks a real route polyline (GeoJSON [lng, lat] pairs) by `progress`
- * (0 = just picked up, 1 = delivered) to place the rider marker. The route
- * itself is real road geometry from the backend's Mapbox seam — only the
- * position *along* it is simulated from delivery status, which is why the
- * UI calls this "estimated position," never "live GPS". */
-function pointAtProgress(points: [number, number][], t: number) {
-  const clamped = Math.min(Math.max(t, 0), 1);
-  const segLens = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
-  const total = segLens.reduce((a, b) => a + b, 0);
-  let target = total * clamped;
-  for (let i = 0; i < segLens.length; i++) {
-    const len = segLens[i];
-    if (target <= len || i === segLens.length - 1) {
-      const frac = len === 0 ? 0 : Math.min(target / len, 1);
-      const [x1, y1] = points[i];
-      const [x2, y2] = points[i + 1];
-      return { x: x1 + (x2 - x1) * frac, y: y1 + (y2 - y1) * frac, segmentIndex: i };
-    }
-    target -= len;
-  }
-  const [x, y] = points[points.length - 1];
-  return { x, y, segmentIndex: points.length - 2 };
-}
+const STATUS_TO_TRACK_STATE: Record<DeliveryStatusKey, Delivery["trackState"]> = STATUS_TO_STAGE;
 
 function formatTime(iso: string | null) {
   if (!iso) return "—";
@@ -81,9 +49,8 @@ function formatDistanceLabel(weightBand?: string) {
 function RouteMap({ delivery }: { delivery: Delivery }) {
   const mapRef = React.useRef<MapRef>(null);
   const polyline = delivery.routePolyline;
-  const idx = STAGE_ORDER.indexOf(delivery.trackState as (typeof STAGE_ORDER)[number]);
   const delivered = delivery.trackState === "delivered";
-  const progress = delivered ? 1 : Math.max(idx, 0) / (STAGE_ORDER.length - 1);
+  const progress = progressForStage(delivery.trackState);
 
   const current = polyline && polyline.length > 1 ? pointAtProgress(polyline, progress) : null;
   const donePoints: [number, number][] =

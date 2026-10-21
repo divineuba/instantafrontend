@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import type { DeliveryStatusKey, DeliveryMessage } from "@/lib/logistics";
 
 export type AdminRole =
   | "SUPER_ADMIN"
@@ -122,9 +123,18 @@ export interface AdminDeliveryRow {
   status: string;
   sbg: string;
   sfg: string;
+  // Raw fields for the live ops map — null for rows geocoding never ran on.
+  rawStatus: DeliveryStatusKey;
+  riderId: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  destLat: number | null;
+  destLng: number | null;
+  routePolyline: [number, number][] | null;
 }
 
 export interface AdminRiderRow {
+  id: string;
   n: string;
   v: string;
   z: string;
@@ -174,6 +184,17 @@ export function refundDelivery(id: string) {
 
 export function reattemptDelivery(id: string) {
   return apiFetch<unknown>(`/admin/deliveries/${encodeURIComponent(id)}/reattempt`, { method: "POST" });
+}
+
+export function reassignRider(id: string, riderId: string) {
+  return apiFetch<unknown>(`/admin/deliveries/${encodeURIComponent(id)}/reassign`, {
+    method: "POST",
+    body: JSON.stringify({ riderId }),
+  });
+}
+
+export function getAdminDeliveryMessages(id: string) {
+  return apiFetch<DeliveryMessage[]>(`/admin/deliveries/${encodeURIComponent(id)}/messages`);
 }
 
 // ---- Pricing rules --------------------------------------------------------------
