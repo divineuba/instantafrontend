@@ -12,6 +12,7 @@ import { SectionKicker } from "@/components/ui/section-kicker";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
 import {
@@ -24,6 +25,7 @@ import {
   swapCrypto,
   sendCrypto,
   withdrawCrypto,
+  createOrder,
   usdCentsToStr,
   nairaCentsToStr,
   fmtAmount,
@@ -31,13 +33,17 @@ import {
   type CryptoHoldingRow,
   type CryptoTransactionRow,
 } from "@/lib/crypto";
+import { PriceChart } from "@/components/crypto/price-chart";
+import { OpenOrders } from "@/components/crypto/open-orders";
+import { PriceAlerts } from "@/components/crypto/price-alerts";
 
-type Tab = "buy" | "sell" | "swap" | "send" | "receive" | "withdraw";
+type Tab = "buy" | "sell" | "swap" | "limit" | "send" | "receive" | "withdraw";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "buy", label: "Buy" },
   { value: "sell", label: "Sell" },
   { value: "swap", label: "Swap" },
+  { value: "limit", label: "Limit" },
   { value: "send", label: "Send" },
   { value: "receive", label: "Receive" },
   { value: "withdraw", label: "Withdraw" },
@@ -82,6 +88,13 @@ export default function AccountCryptoPage() {
     toAddress: "",
   });
   const [withdrawForm, setWithdrawForm] = React.useState({ symbol: "", amount: "" });
+  const [limitForm, setLimitForm] = React.useState({
+    side: "LIMIT_BUY" as "LIMIT_BUY" | "LIMIT_SELL",
+    symbol: "",
+    limitPrice: "",
+    amount: "",
+  });
+  const [ordersRefreshKey, setOrdersRefreshKey] = React.useState(0);
   const [receiveSymbol, setReceiveSymbol] = React.useState("");
   const [receiveAddress, setReceiveAddress] = React.useState<string | null>(null);
   const [receiveLoading, setReceiveLoading] = React.useState(false);
@@ -102,6 +115,7 @@ export default function AccountCryptoPage() {
         }));
         setSendForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
         setWithdrawForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
+        setLimitForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
         setReceiveSymbol((s) => s || a[0]?.symbol || "");
       })
       .catch(() => setError("Couldn't load your crypto account."))
@@ -119,13 +133,15 @@ export default function AccountCryptoPage() {
     return assets?.find((a) => a.symbol === symbol)?.priceUsdCents ?? 0;
   }
 
-  async function run(action: () => Promise<unknown>, successMsg: string) {
+  async function run<T>(action: () => Promise<T>, successMsg: string) {
     setBusy(true);
     setFormError(null);
     try {
-      await action();
+      const result = await action();
       load();
-      toast(successMsg, "success");
+      setOrdersRefreshKey((k) => k + 1);
+      const fee = (result as { feeUsdCents?: number }).feeUsdCents;
+      toast(fee ? `${successMsg} Fee: ${usdCentsToStr(fee)}.` : successMsg, "success");
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "That didn't go through.");
     } finally {
@@ -199,6 +215,23 @@ export default function AccountCryptoPage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div>
+        <SectionKicker>Chart</SectionKicker>
+        <div className="bg-card border border-divider rounded-lg p-4">
+          <PriceChart
+            assetSymbol={
+              (tab === "buy" ? buyForm.symbol
+                : tab === "sell" ? sellForm.symbol
+                : tab === "swap" ? swapForm.from
+                : tab === "limit" ? limitForm.symbol
+                : tab === "send" ? sendForm.symbol
+                : tab === "withdraw" ? withdrawForm.symbol
+                : receiveSymbol) || assets[0]?.symbol || ""
+            }
+          />
+        </div>
       </div>
 
       <div>
@@ -339,6 +372,95 @@ export default function AccountCryptoPage() {
             </form>
           )}
 
+          {tab === "limit" && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const limitPriceUsdCents = Math.round(Number(limitForm.limitPrice) * 100);
+                if (!limitPriceUsdCents || limitPriceUsdCents <= 0) {
+                  setFormError("Enter a valid limit price.");
+                  return;
+                }
+                if (limitForm.side === "LIMIT_BUY") {
+                  const nairaAmountCents = Math.round(Number(limitForm.amount) * 100);
+                  if (!nairaAmountCents || nairaAmountCents <= 0) {
+                    setFormError("Enter a valid Naira amount.");
+                    return;
+                  }
+                  run(
+                    () => createOrder({ type: "LIMIT_BUY", assetSymbol: limitForm.symbol, limitPriceUsdCents, nairaAmountCents }),
+                    `Limit buy order placed for ${limitForm.symbol}.`,
+                  );
+                } else {
+                  const amount = Number(limitForm.amount);
+                  if (!amount || amount <= 0) {
+                    setFormError("Enter a valid amount.");
+                    return;
+                  }
+                  run(
+                    () => createOrder({ type: "LIMIT_SELL", assetSymbol: limitForm.symbol, limitPriceUsdCents, amount }),
+                    `Limit sell order placed for ${limitForm.symbol}.`,
+                  );
+                }
+              }}
+              className="flex flex-col gap-3"
+            >
+              <Segmented
+                name="limit-side"
+                value={limitForm.side}
+                onChange={(v) => setLimitForm({ ...limitForm, side: v })}
+                options={[
+                  { value: "LIMIT_BUY", label: "Buy" },
+                  { value: "LIMIT_SELL", label: "Sell" },
+                ]}
+              />
+              <div className="grid gap-3 sm:grid-cols-3 items-end">
+                <Field label="Asset">
+                  {limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0 ? (
+                    <Select disabled>
+                      <option>No balance to sell</option>
+                    </Select>
+                  ) : (
+                    <Select value={limitForm.symbol} onChange={(e) => setLimitForm({ ...limitForm, symbol: e.target.value })}>
+                      {limitForm.side === "LIMIT_BUY" ? assetOptions : ownedOptions}
+                    </Select>
+                  )}
+                </Field>
+                <Field label="Limit price (USD)" hint={limitForm.symbol ? `Market: ${usdCentsToStr(priceOf(limitForm.symbol))}` : undefined}>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={limitForm.limitPrice}
+                    onChange={(e) => setLimitForm({ ...limitForm, limitPrice: e.target.value })}
+                    placeholder="65000"
+                  />
+                </Field>
+                <Field label={limitForm.side === "LIMIT_BUY" ? "Amount (NGN)" : "Amount"}>
+                  <Input
+                    type="number"
+                    min="0"
+                    step={limitForm.side === "LIMIT_BUY" ? "1" : "any"}
+                    value={limitForm.amount}
+                    onChange={(e) => setLimitForm({ ...limitForm, amount: e.target.value })}
+                    placeholder={limitForm.side === "LIMIT_BUY" ? "50000" : "0.001"}
+                  />
+                </Field>
+              </div>
+              <Button
+                type="submit"
+                disabled={busy || (limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0)}
+                className="self-end"
+              >
+                {busy ? "Placing…" : "Place order"}
+              </Button>
+              <p className="text-xs text-neutral-600 m-0">
+                Funds are held until the order fills or is cancelled.
+              </p>
+              <OpenOrders refreshKey={ordersRefreshKey} />
+            </form>
+          )}
+
           {tab === "send" && (
             <form
               onSubmit={(e) => {
@@ -436,9 +558,14 @@ export default function AccountCryptoPage() {
                 </Button>
               </div>
               {receiveAddress && (
-                <div className="flex items-center gap-2.5 px-4 py-3 bg-accent-50 border border-accent-200 rounded-lg">
-                  <Icon name="wallet" size={16} className="text-accent" />
-                  <code className="text-sm flex-1 break-all">{receiveAddress}</code>
+                <div className="flex flex-col gap-3 items-center sm:items-start">
+                  <div className="p-3 bg-white border border-divider rounded-lg">
+                    <QRCodeSVG value={receiveAddress} size={160} />
+                  </div>
+                  <div className="flex items-center gap-2.5 px-4 py-3 bg-accent-50 border border-accent-200 rounded-lg w-full">
+                    <Icon name="wallet" size={16} className="text-accent" />
+                    <code className="text-sm flex-1 break-all">{receiveAddress}</code>
+                  </div>
                 </div>
               )}
             </div>
@@ -490,6 +617,13 @@ export default function AccountCryptoPage() {
       </div>
 
       <div>
+        <SectionKicker>Price alerts</SectionKicker>
+        <div className="bg-card border border-divider rounded-lg p-4 max-w-[420px]">
+          <PriceAlerts assets={assets} />
+        </div>
+      </div>
+
+      <div>
         <SectionKicker>Transactions</SectionKicker>
         {!txns || txns.length === 0 ? (
           <EmptyState icon="file" title="No crypto transactions yet" />
@@ -501,6 +635,7 @@ export default function AccountCryptoPage() {
                 <Th>Type</Th>
                 <Th>Details</Th>
                 <Th>Amount</Th>
+                <Th>Fee</Th>
                 <Th>Status</Th>
               </Tr>
             </Thead>
@@ -525,6 +660,7 @@ export default function AccountCryptoPage() {
                       </span>
                     )}
                   </Td>
+                  <Td>{t.feeUsdCents ? usdCentsToStr(t.feeUsdCents) : "—"}</Td>
                   <Td>
                     <Tag variant={statusVariant(t.status)}>{t.status}</Tag>
                   </Td>

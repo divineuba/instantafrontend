@@ -29,9 +29,44 @@ export interface CryptoTransactionRow {
   counterAmount: string | null;
   priceUsdCents: number;
   nairaAmountCents: number | null;
+  feeUsdCents: number;
   counterpartyAddress: string | null;
   counterpartyUserId: string | null;
   description: string;
+  createdAt: string;
+}
+
+export interface MarketChartPoint {
+  t: number;
+  priceUsdCents: number;
+}
+
+export type CryptoOrderType = "LIMIT_BUY" | "LIMIT_SELL";
+export type CryptoOrderStatus = "OPEN" | "FILLED" | "CANCELLED";
+
+export interface CryptoOrderRow {
+  id: string;
+  type: CryptoOrderType;
+  status: CryptoOrderStatus;
+  assetSymbol: string;
+  limitPriceUsdCents: number;
+  amount: string | null;
+  nairaAmountCents: number | null;
+  filledAt: string | null;
+  filledTxnId: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+}
+
+export type CryptoAlertDirection = "ABOVE" | "BELOW";
+
+export interface CryptoPriceAlertRow {
+  id: string;
+  assetSymbol: string;
+  direction: CryptoAlertDirection;
+  targetUsdCents: number;
+  triggeredAt: string | null;
+  cancelledAt: string | null;
   createdAt: string;
 }
 
@@ -90,6 +125,56 @@ export function withdrawCrypto(input: { assetSymbol: string; amount: number }) {
   return apiFetch<CryptoTransactionRow>("/crypto/withdraw", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export function getMarketChart(assetSymbol: string, days = 7) {
+  return apiFetch<MarketChartPoint[]>(
+    `/crypto/chart/${encodeURIComponent(assetSymbol)}?days=${days}`,
+  );
+}
+
+export function listOrders() {
+  return apiFetch<CryptoOrderRow[]>("/crypto/orders");
+}
+
+export function createOrder(input: {
+  type: CryptoOrderType;
+  assetSymbol: string;
+  limitPriceUsdCents: number;
+  amount?: number;
+  nairaAmountCents?: number;
+}) {
+  return apiFetch<CryptoOrderRow>("/crypto/orders", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function cancelOrder(id: string) {
+  return apiFetch<{ ok: true }>(`/crypto/orders/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function listAlerts() {
+  return apiFetch<CryptoPriceAlertRow[]>("/crypto/alerts");
+}
+
+export function createAlert(input: {
+  assetSymbol: string;
+  direction: CryptoAlertDirection;
+  targetUsdCents: number;
+}) {
+  return apiFetch<CryptoPriceAlertRow>("/crypto/alerts", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function cancelAlert(id: string) {
+  return apiFetch<{ ok: true }>(`/crypto/alerts/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }
 

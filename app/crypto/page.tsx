@@ -9,6 +9,8 @@ import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAssets, usdCentsToStr, type CryptoAsset } from "@/lib/crypto";
+import { PriceChart } from "@/components/crypto/price-chart";
+import { Select } from "@/components/ui/field";
 
 const ANSWERS: { icon: IconName; q: string; title: string; body: string }[] = [
   { icon: "bitcoin", q: "What", title: "6 major assets", body: "Bitcoin, Ethereum, USDT, USDC, BNB and Solana, with more on the way." },
@@ -66,6 +68,48 @@ function PriceTicker() {
   );
 }
 
+function ChartSection() {
+  const [assets, setAssets] = React.useState<CryptoAsset[] | null>(null);
+  const [symbol, setSymbol] = React.useState("");
+
+  React.useEffect(() => {
+    let active = true;
+    getAssets()
+      .then((a) => {
+        if (active) {
+          setAssets(a);
+          setSymbol((s) => s || a[0]?.symbol || "");
+        }
+      })
+      .catch(() => {
+        if (active) setAssets([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!symbol) return null;
+
+  return (
+    <section className="ins-container pt-24">
+      <div className="p-6 bg-card border border-divider rounded-xl shadow-md flex flex-col gap-4">
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <span className="text-xl font-semibold">Market chart</span>
+          <Select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="w-auto">
+            {assets?.map((a) => (
+              <option key={a.symbol} value={a.symbol}>
+                {a.symbol} — {a.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <PriceChart assetSymbol={symbol} />
+      </div>
+    </section>
+  );
+}
+
 export default function CryptoHomePage() {
   return (
     <>
@@ -110,6 +154,8 @@ export default function CryptoHomePage() {
             ))}
           </div>
         </section>
+
+        <ChartSection />
 
         {/* CTA band */}
         <section className="ins-container pt-24 pb-24">

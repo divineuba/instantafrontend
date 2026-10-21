@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -91,8 +92,11 @@ export default function CryptoReceivePage() {
                 </Button>
               </div>
               {address && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2.5 px-4 py-3 bg-accent-50 border border-accent-200 rounded-lg">
+                <div className="flex flex-col gap-3 items-center">
+                  <div className="p-3 bg-white border border-divider rounded-lg">
+                    <QRCodeSVG value={address} size={180} />
+                  </div>
+                  <div className="flex items-center gap-2.5 px-4 py-3 bg-accent-50 border border-accent-200 rounded-lg w-full">
                     <Icon name="wallet" size={16} className="text-accent shrink-0" />
                     <code className="text-sm flex-1 break-all">{address}</code>
                   </div>

@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
-import { getHoldings, sendCrypto, fmtAmount, type CryptoHoldingRow } from "@/lib/crypto";
+import { getHoldings, sendCrypto, fmtAmount, usdCentsToStr, type CryptoHoldingRow } from "@/lib/crypto";
 
 export default function CryptoSendPage() {
   const { user, loading: authLoading } = useAuth();
@@ -66,10 +66,15 @@ export default function CryptoSendPage() {
     setBusy(true);
     setFormError(null);
     try {
-      await sendCrypto({ assetSymbol: form.symbol, amount, ...recipient });
+      const result = await sendCrypto({ assetSymbol: form.symbol, amount, ...recipient });
       setSent(true);
       load();
-      toast(`Sent ${form.symbol}.`, "success");
+      toast(
+        result.feeUsdCents
+          ? `Sent ${form.symbol}. Fee: ${usdCentsToStr(result.feeUsdCents)}.`
+          : `Sent ${form.symbol}.`,
+        "success",
+      );
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "That didn't go through.");
     } finally {
