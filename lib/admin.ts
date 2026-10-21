@@ -251,8 +251,17 @@ export interface AdminDocsEmpty {
   sub: string;
 }
 
+export interface AdminDocRow {
+  id: string;
+  pnr: string;
+  p: string;
+  label: string;
+  url: string;
+  uploadedAt: string;
+}
+
 export function getAdminBookings(tab: BookingsTab = "book") {
-  return apiFetch<AdminBookingRow[] | AdminRefundRow[] | AdminRouteRow[] | AdminDocsEmpty>(
+  return apiFetch<AdminBookingRow[] | AdminRefundRow[] | AdminRouteRow[] | AdminDocRow[] | AdminDocsEmpty>(
     `/admin/bookings?tab=${tab}`,
   );
 }
@@ -263,6 +272,13 @@ export function approveRefund(bookingRef: string) {
 
 export function rejectRefund(bookingRef: string) {
   return apiFetch<unknown>(`/admin/bookings/${encodeURIComponent(bookingRef)}/refund/reject`, { method: "POST" });
+}
+
+export function reviewTravelDocument(id: string, action: "APPROVE" | "REJECT", note?: string) {
+  return apiFetch<unknown>(`/admin/bookings/documents/${encodeURIComponent(id)}/review`, {
+    method: "POST",
+    body: JSON.stringify({ action, note }),
+  });
 }
 
 // ---- Finance -------------------------------------------------------------------

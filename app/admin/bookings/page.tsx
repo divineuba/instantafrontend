@@ -13,17 +13,19 @@ import {
   getAdminBookings,
   approveRefund,
   rejectRefund,
+  reviewTravelDocument,
   type BookingsTab,
   type AdminBookingRow,
   type AdminRefundRow,
   type AdminRouteRow,
+  type AdminDocRow,
   type AdminDocsEmpty,
 } from "@/lib/admin";
 
 export default function AdminBookingsPage() {
   const [tab, setTab] = React.useState<BookingsTab>("book");
   const [data, setData] = React.useState<
-    AdminBookingRow[] | AdminRefundRow[] | AdminRouteRow[] | AdminDocsEmpty | null
+    AdminBookingRow[] | AdminRefundRow[] | AdminRouteRow[] | AdminDocRow[] | AdminDocsEmpty | null
   >(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -40,6 +42,9 @@ export default function AdminBookingsPage() {
   }, []);
 
   React.useEffect(() => {
+    // Loading the active tab's data from the server on mount/tab-change is a
+    // genuine sync-with-external-system effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(tab);
   }, [tab, load]);
 
@@ -65,6 +70,17 @@ export default function AdminBookingsPage() {
       await rejectRefund(pnr);
       load(tab);
       toast("Refund rejected.", "success");
+    } finally {
+      setBusyRef(null);
+    }
+  }
+
+  async function handleReviewDocument(id: string, action: "APPROVE" | "REJECT") {
+    setBusyRef(id);
+    try {
+      await reviewTravelDocument(id, action);
+      load(tab);
+      toast(action === "APPROVE" ? "Document approved." : "Document rejected.", "success");
     } finally {
       setBusyRef(null);
     }
@@ -231,6 +247,58 @@ export default function AdminBookingsPage() {
           title={(data as AdminDocsEmpty).message}
           description={(data as AdminDocsEmpty).sub}
         />
+      )}
+
+      {data && !loading && !error && tab === "docs" && !("empty" in data) && (
+        <Table>
+          <Thead>
+            <Tr>
+              <Th>PNR</Th>
+              <Th>Passenger</Th>
+              <Th>Document</Th>
+              <Th>Uploaded</Th>
+              <Th>Preview</Th>
+              <Th>Actions</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {(data as AdminDocRow[]).map((d) => (
+              <Tr key={d.id}>
+                <Td className="font-medium">{d.pnr}</Td>
+                <Td>{d.p}</Td>
+                <Td>{d.label}</Td>
+                <Td>{new Date(d.uploadedAt).toLocaleDateString()}</Td>
+                <Td>
+                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-accent-700 underline">
+                    View
+                  </a>
+                </Td>
+                <Td>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="default"
+                      className="!px-3 !py-1.5 text-xs"
+                      disabled={busyRef === d.id}
+                      onClick={() => handleReviewDocument(d.id, "APPROVE")}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="default"
+                      className="!px-3 !py-1.5 text-xs"
+                      disabled={busyRef === d.id}
+                      onClick={() => handleReviewDocument(d.id, "REJECT")}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
       )}
     </div>
   );
