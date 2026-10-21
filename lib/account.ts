@@ -122,6 +122,31 @@ export function addPassenger(input: {
   });
 }
 
+export function updatePassenger(
+  id: string,
+  input: Partial<{
+    firstName: string;
+    lastName: string;
+    dob: string;
+    gender: string;
+    nationality: string;
+    passportNumber: string;
+    passportCountry: string;
+    passportExpiry: string;
+  }>,
+) {
+  return apiFetch<SavedPassenger>(`/account/passengers/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deletePassenger(id: string) {
+  return apiFetch<{ ok: true }>(`/account/passengers/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 // ---- Payments -------------------------------------------------------------
 
 export interface PaymentMethodCard {

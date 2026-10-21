@@ -13,9 +13,12 @@ import {
   searchFlights,
   minutesToHm,
   fmtUsd,
-  defaultDepartDate,
+  tripTypeLabel,
+  type CabinClass,
   type FlightSort,
+  type SearchFlightLeg,
   type SearchFlightsResponse,
+  type TripType,
 } from "@/lib/travels";
 
 const SORT_LABELS: { key: FlightSort; label: string }[] = [
@@ -27,18 +30,45 @@ const SORT_LABELS: { key: FlightSort; label: string }[] = [
 
 const STOP_LABELS = ["Nonstop", "1 stop", "2+ stops"];
 
+interface ParsedLeg extends SearchFlightLeg {
+  fromLabel: string;
+  toLabel: string;
+}
+
+function parseLegs(raw: string | null): ParsedLeg[] {
+  if (!raw) {
+    return [
+      { fromLabel: "Lagos · LOS", toLabel: "London · LHR", origin: "LOS", destination: "LHR", departDate: "" },
+    ];
+  }
+  try {
+    const parsed = JSON.parse(raw) as ParsedLeg[];
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {
+    // fall through to the default below
+  }
+  return [
+    { fromLabel: "Lagos · LOS", toLabel: "London · LHR", origin: "LOS", destination: "LHR", departDate: "" },
+  ];
+}
+
+function tripTypeFromParam(v: string | null): TripType {
+  if (v === "oneway") return "ONE_WAY";
+  if (v === "multicity") return "MULTI_CITY";
+  return "ROUND_TRIP";
+}
+
 function ResultsBody() {
   const searchParams = useSearchParams();
 
-  const from = searchParams.get("from") ?? "Lagos · LOS";
-  const to = searchParams.get("to") ?? "London · LHR";
-  const origin = searchParams.get("origin") ?? "LOS";
-  const destination = searchParams.get("destination") ?? "LHR";
-  const departDate = searchParams.get("departDate") ?? defaultDepartDate();
-  const returnDate = searchParams.get("returnDate") ?? "";
+  const legs = React.useMemo(() => parseLegs(searchParams.get("legs")), [searchParams]);
+  const tripType = tripTypeFromParam(searchParams.get("tripType"));
+  const adults = Number(searchParams.get("adults") ?? "1") || 1;
+  const cabinClass = (searchParams.get("cabinClass") as CabinClass) || undefined;
+  const direct = searchParams.get("direct") === "1";
 
   const [sort, setSort] = React.useState<FlightSort>("recommended");
-  const [stops, setStops] = React.useState<boolean[]>([true, true, true]);
+  const [stops, setStops] = React.useState<boolean[]>(direct ? [true, false, false] : [true, true, true]);
   const [airlineFilter, setAirlineFilter] = React.useState<Set<string>>(new Set());
   const [data, setData] = React.useState<SearchFlightsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -49,10 +79,9 @@ function ResultsBody() {
     setLoading(true);
     setError(false);
     searchFlights({
-      origin,
-      destination,
-      departDate,
-      returnDate: returnDate || undefined,
+      legs: legs.map(({ origin, destination, departDate }) => ({ origin, destination, departDate })),
+      adults,
+      cabinClass,
       sort,
       stops: activeStops.length < 3 ? activeStops : undefined,
       airlines: airlineFilter.size > 0 ? Array.from(airlineFilter) : undefined,
@@ -63,7 +92,7 @@ function ResultsBody() {
         setError(true);
       })
       .finally(() => setLoading(false));
-  }, [origin, destination, departDate, returnDate, sort, stops, airlineFilter]);
+  }, [legs, adults, cabinClass, sort, stops, airlineFilter]);
 
   React.useEffect(() => {
     // Re-querying the server whenever sort/stops/airline filters change and
@@ -90,14 +119,13 @@ function ResultsBody() {
     setAirlineFilter(new Set());
   }
 
-  const dateLabel = returnDate
-    ? `${departDate} → ${returnDate}`
-    : departDate;
+  const routeLabel = `${legs[0].fromLabel.split(" · ")[0]} to ${legs[legs.length - 1].toLabel.split(" · ")[0]}, ${tripTypeLabel(tripType)}`;
+  const dateLabel = legs.map((l) => l.departDate).join(" → ");
 
   return (
     <>
       <Header business="travels" active="results" />
-      <FlowBar routeLabel={`${from.split(" · ")[0]} to ${to.split(" · ")[0]}, return`} dateLabel={dateLabel} step={1} />
+      <FlowBar routeLabel={routeLabel} dateLabel={dateLabel} step={1} />
       <main className="flex-1 ins-container pt-8 pb-24 grid lg:grid-cols-[280px_minmax(0,1fr)] gap-8 items-start">
         <aside className="flex flex-col gap-5 lg:sticky lg:top-6">
           <div className="flex items-center justify-between">
@@ -116,7 +144,7 @@ function ResultsBody() {
                     {label}
                   </span>
                   <span className="text-[13px] text-neutral-600">
-                    {fromPrice !== undefined ? `$${fromPrice}` : "—"}
+                    {fromPrice !== undefined && Number.isFinite(fromPrice) ? `$${fromPrice}` : "—"}
                   </span>
                 </label>
               );
@@ -166,7 +194,7 @@ function ResultsBody() {
               ? "Searching…"
               : error
                 ? "Search failed"
-                : `${data?.resultCount ?? 0} flights · prices are per adult, return, including taxes`}
+                : `${data?.resultCount ?? 0} flights · prices are per adult, ${tripTypeLabel(tripType)}, including taxes`}
           </div>
 
           {!loading && error && (
@@ -204,57 +232,46 @@ function ResultsBody() {
                     <span className="text-sm font-medium">{o?.airlineName ?? "Loading…"}</span>
                     {o?.hasBadge && <Tag variant="accent">{o.badge}</Tag>}
                   </div>
+                  {o?.legs.map((leg, li) => (
+                    <React.Fragment key={leg.id}>
+                      <div className="text-xs text-neutral-700 sm:hidden">
+                        {o.legs.length > 2 ? `Leg ${li + 1} · ` : ""}
+                        {leg.date}
+                      </div>
+                      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] sm:grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-2 sm:gap-4 items-center">
+                        <div>
+                          <div className="text-xl sm:text-2xl font-semibold leading-none">{leg.depart}</div>
+                          <div className="text-xs text-neutral-600">{leg.originCode}</div>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-xs text-neutral-700">{minutesToHm(leg.durationMin)}</span>
+                          <span className="w-full h-px bg-neutral-400" />
+                          <span className={`text-xs ${leg.stops === 0 ? "text-accent-700" : "text-neutral-700"}`}>
+                            {leg.stopsLabel}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xl sm:text-2xl font-semibold leading-none">{leg.arrive}</div>
+                          <div className="text-xs text-neutral-600">{leg.destinationCode}</div>
+                        </div>
+                        <div className="hidden sm:block text-xs text-neutral-700">
+                          {o.legs.length > 2 ? `Leg ${li + 1} · ` : ""}
+                          {leg.date}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  ))}
                   {o && (
-                    <>
-                      <div className="text-xs text-neutral-700 sm:hidden">{o.outboundDate}</div>
-                      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] sm:grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-2 sm:gap-4 items-center">
-                        <div>
-                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.outboundDepart}</div>
-                          <div className="text-xs text-neutral-600">{o.originCode}</div>
-                        </div>
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-xs text-neutral-700">{minutesToHm(o.outboundDurationMin)}</span>
-                          <span className="w-full h-px bg-neutral-400" />
-                          <span className={`text-xs ${o.outboundStops === 0 ? "text-accent-700" : "text-neutral-700"}`}>
-                            {o.outboundStopsLabel}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.outboundArrive}</div>
-                          <div className="text-xs text-neutral-600">{o.destinationCode}</div>
-                        </div>
-                        <div className="hidden sm:block text-xs text-neutral-700">{o.outboundDate}</div>
-                      </div>
-                      <div className="text-xs text-neutral-700 sm:hidden">{o.returnDate}</div>
-                      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] sm:grid-cols-[70px_minmax(0,1fr)_70px_110px] gap-2 sm:gap-4 items-center">
-                        <div>
-                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.returnDepart}</div>
-                          <div className="text-xs text-neutral-600">{o.destinationCode}</div>
-                        </div>
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-xs text-neutral-700">{minutesToHm(o.returnDurationMin)}</span>
-                          <span className="w-full h-px bg-neutral-400" />
-                          <span className={`text-xs ${o.returnStops === 0 ? "text-accent-700" : "text-neutral-700"}`}>
-                            {o.returnStopsLabel}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="text-xl sm:text-2xl font-semibold leading-none">{o.returnArrive}</div>
-                          <div className="text-xs text-neutral-600">{o.originCode}</div>
-                        </div>
-                        <div className="hidden sm:block text-xs text-neutral-700">{o.returnDate}</div>
-                      </div>
-                      <div className="flex gap-4 text-xs text-neutral-700">
-                        <span className="flex items-center gap-1.5">
-                          <Icon name="briefcase" size={13} />
-                          {o.baggage}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Icon name="refresh" size={13} />
-                          {o.changePolicy}
-                        </span>
-                      </div>
-                    </>
+                    <div className="flex gap-4 text-xs text-neutral-700">
+                      <span className="flex items-center gap-1.5">
+                        <Icon name="briefcase" size={13} />
+                        {o.baggage}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Icon name="refresh" size={13} />
+                        {o.changePolicy}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="border-t sm:border-t-0 sm:border-l border-divider p-5 flex flex-col justify-between gap-2.5">
@@ -265,13 +282,13 @@ function ResultsBody() {
                         <div className="text-[40px] font-semibold leading-none">{fmtUsd(o.price)}</div>
                       </div>
                       <Link
-                        href={`/travels/detail?offer=${o.id}`}
+                        href={`/travels/detail?offer=${o.id}&adults=${adults}`}
                         className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap no-underline font-semibold text-sm leading-tight rounded-[0.4rem] border border-accent bg-accent text-white hover:bg-accent-700 hover:border-accent-700 px-4 py-[9px]"
                       >
                         Select
                       </Link>
                       <Link
-                        href={`/travels/detail?offer=${o.id}`}
+                        href={`/travels/detail?offer=${o.id}&adults=${adults}`}
                         className="inline-flex items-center justify-center text-[13px] text-accent-700 no-underline hover:underline"
                       >
                         Flight details

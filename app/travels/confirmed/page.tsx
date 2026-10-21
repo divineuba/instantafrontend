@@ -5,6 +5,7 @@ import { Footer } from "@/components/chrome/footer";
 import { Icon } from "@/components/ui/icon";
 import { LinkButton } from "@/components/ui/button";
 import { ConfirmedActions } from "@/components/travels/confirmed-actions";
+import { BookingManagement } from "@/components/travels/booking-management";
 import { getBooking } from "@/lib/travels";
 import { ApiError } from "@/lib/api";
 
@@ -54,15 +55,18 @@ export default async function TravelsConfirmedPage({
 
   const { offer } = booking;
   const qr = renderQr(booking.bookingRef);
+  const firstLeg = offer.legs[0];
 
   const ticket = [
-    { k: "Passenger", v: `${booking.passengerFirstName} ${booking.passengerLastName}` },
-    { k: "Flight", v: offer.outboundFlightNo },
-    { k: "Date", v: offer.outboundDate },
-    { k: "Departs", v: offer.outboundDepart },
-    { k: "Arrives", v: offer.outboundArrive },
-    { k: "Terminal", v: "T1 → T5" },
-    { k: "Class", v: `${offer.cabinClass} · Y` },
+    {
+      k: `Passenger${booking.passengers.length > 1 ? "s" : ""}`,
+      v: booking.passengers.map((p) => `${p.firstName} ${p.lastName}`).join(", "),
+    },
+    { k: "Flight", v: offer.legs.map((l) => l.flightNo).join(" / ") },
+    { k: "Date", v: firstLeg.date },
+    { k: "Departs", v: firstLeg.depart },
+    { k: "Arrives", v: firstLeg.arrive },
+    { k: "Class", v: offer.cabinClass },
     { k: "Baggage", v: offer.baggage },
   ];
 
@@ -138,8 +142,8 @@ export default async function TravelsConfirmedPage({
         <div className="flex gap-2.5 flex-wrap items-center">
           <ConfirmedActions
             bookingRef={booking.bookingRef}
-            summary={`${offer.outboundFlightNo} ${offer.originCode} to ${offer.destinationCode} on ${offer.outboundDate}`}
-            startIso={offer.outboundDate.replace(/[^0-9]/g, "")}
+            summary={`${firstLeg.flightNo} ${offer.originCode} to ${offer.destinationCode} on ${firstLeg.date}`}
+            startIso={firstLeg.date.replace(/[^0-9]/g, "")}
           />
           <Link
             href="/logistics/book"
@@ -149,6 +153,8 @@ export default async function TravelsConfirmedPage({
             Need something delivered to the airport?
           </Link>
         </div>
+
+        <BookingManagement booking={booking} />
       </main>
       <Footer />
     </>

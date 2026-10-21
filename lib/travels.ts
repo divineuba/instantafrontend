@@ -14,6 +14,22 @@ export interface PopularRoute {
   sortOrder: number;
 }
 
+export interface FlightOfferLeg {
+  id: string;
+  sequence: number;
+  originCode: string;
+  originCity: string;
+  destinationCode: string;
+  destinationCity: string;
+  flightNo: string;
+  depart: string;
+  arrive: string;
+  date: string;
+  durationMin: number;
+  stops: number;
+  stopsLabel: string;
+}
+
 export interface FlightOffer {
   id: string;
   originCode: string;
@@ -28,20 +44,7 @@ export interface FlightOffer {
   baggage: string;
   changePolicy: string;
   price: string;
-  outboundFlightNo: string;
-  outboundDepart: string;
-  outboundArrive: string;
-  outboundDate: string;
-  outboundDurationMin: number;
-  outboundStops: number;
-  outboundStopsLabel: string;
-  returnFlightNo: string;
-  returnDepart: string;
-  returnArrive: string;
-  returnDate: string;
-  returnDurationMin: number;
-  returnStops: number;
-  returnStopsLabel: string;
+  legs: FlightOfferLeg[];
   createdAt: string;
   updatedAt: string;
 }
@@ -53,13 +56,18 @@ export interface FlightOfferResult extends FlightOffer {
 
 export type FlightSort = "recommended" | "cheapest" | "fastest" | "earliest";
 export type DepartTimeBand = "night" | "morning" | "afternoon" | "evening";
+export type CabinClass = "Economy" | "Premium" | "Business" | "First";
+
+export interface SearchFlightLeg {
+  origin: string;
+  destination: string;
+  departDate: string;
+}
 
 export interface SearchFlightsParams {
-  origin?: string;
-  destination?: string;
-  departDate?: string;
-  returnDate?: string;
+  legs: SearchFlightLeg[];
   adults?: number;
+  cabinClass?: CabinClass;
   stops?: number[];
   airlines?: string[];
   maxPrice?: number;
@@ -113,29 +121,56 @@ export function defaultReturnDate() {
   return isoDatePlusDays(44);
 }
 
-export function searchFlights(params: SearchFlightsParams = {}) {
-  const qs = new URLSearchParams();
-  if (params.origin) qs.set("origin", params.origin);
-  if (params.destination) qs.set("destination", params.destination);
-  if (params.departDate) qs.set("departDate", params.departDate);
-  if (params.returnDate) qs.set("returnDate", params.returnDate);
-  if (params.adults) qs.set("adults", String(params.adults));
-  if (params.stops?.length) qs.set("stops", params.stops.join(","));
-  if (params.airlines?.length) qs.set("airlines", params.airlines.join(","));
-  if (params.maxPrice !== undefined) qs.set("maxPrice", String(params.maxPrice));
-  if (params.maxDurationMin !== undefined)
-    qs.set("maxDurationMin", String(params.maxDurationMin));
-  if (params.departTimeBand) qs.set("departTimeBand", params.departTimeBand);
-  if (params.sort) qs.set("sort", params.sort);
-  const query = qs.toString();
-  return apiFetch<SearchFlightsResponse>(`/flights/search${query ? `?${query}` : ""}`);
+export function searchFlights(params: SearchFlightsParams) {
+  return apiFetch<SearchFlightsResponse>("/flights/search", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
 }
 
 export function getOffer(id: string) {
   return apiFetch<FlightOffer>(`/flights/offers/${encodeURIComponent(id)}`);
 }
 
+export interface ConfirmedFlightPrice {
+  price: number;
+  currency: string;
+  fareRules: string[];
+}
+
+export function confirmPrice(offerId: string) {
+  return apiFetch<ConfirmedFlightPrice>(`/flights/offers/${encodeURIComponent(offerId)}/price`, {
+    method: "POST",
+  });
+}
+
+export interface SeatMapSeat {
+  number: string;
+  available: boolean;
+  characteristics: string[];
+  priceAmount?: string;
+  priceCurrency?: string;
+}
+
+export interface SeatMapRow {
+  rowNumber: string;
+  seats: SeatMapSeat[];
+}
+
+export interface SeatMapDeck {
+  deckType: string;
+  rows: SeatMapRow[];
+}
+
+export function getSeatMap(offerId: string) {
+  return apiFetch<SeatMapDeck[]>(`/flights/offers/${encodeURIComponent(offerId)}/seatmap`);
+}
+
+export type TravelerType = "ADULT" | "CHILD" | "INFANT";
+
 export interface PassengerInput {
+  type?: TravelerType;
+  savedPassengerId?: string;
   title: "Mr" | "Ms" | "Mx";
   firstName: string;
   lastName: string;
@@ -149,16 +184,19 @@ export interface PassengerInput {
 
 export interface CreateBookingRequest {
   offerId: string;
-  adults?: number;
-  passenger: PassengerInput;
+  passengers: PassengerInput[];
   specialRequests?: string[];
   contactEmail: string;
   contactPhone: string;
+  workspaceId?: string;
 }
 
 export type BookingStatus = "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED";
+export type TripType = "ONE_WAY" | "ROUND_TRIP" | "MULTI_CITY";
 export type PaymentMethodKey = "CARD" | "WALLET" | "BANK_TRANSFER" | "BUSINESS";
 export type PaymentStatusKey = "SUCCESS" | "FAILED";
+export type TravelDocumentStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type RefundRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface Payment {
   id: string;
@@ -170,21 +208,51 @@ export interface Payment {
   createdAt: string;
 }
 
+export interface BookingPassenger {
+  id: string;
+  bookingId: string;
+  savedPassengerId: string | null;
+  type: TravelerType;
+  title: string;
+  firstName: string;
+  lastName: string;
+  dob: string;
+  gender: string;
+  nationality: string;
+  passportNumber: string;
+  passportCountry: string;
+  passportExpiry: string;
+}
+
+export interface TravelDocument {
+  id: string;
+  bookingId: string;
+  key: string;
+  url: string;
+  label: string;
+  status: TravelDocumentStatus;
+  reviewNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RefundRequest {
+  id: string;
+  bookingId: string;
+  reason: string | null;
+  status: RefundRequestStatus;
+  decidedAt: string | null;
+  createdAt: string;
+}
+
 export interface Booking {
   id: string;
   bookingRef: string;
   offerId: string;
   offer: FlightOffer;
+  tripType: TripType;
   adults: number;
-  passengerTitle: string;
-  passengerFirstName: string;
-  passengerLastName: string;
-  passengerDob: string;
-  passengerGender: string;
-  passengerNationality: string;
-  passportNumber: string;
-  passportCountry: string;
-  passportExpiry: string;
+  passengers: BookingPassenger[];
   specialRequests: string[];
   contactEmail: string;
   contactPhone: string;
@@ -194,6 +262,8 @@ export interface Booking {
   total: string;
   status: BookingStatus;
   payments: Payment[];
+  documents: TravelDocument[];
+  refundRequests: RefundRequest[];
   createdAt: string;
   updatedAt: string;
 }
@@ -226,6 +296,51 @@ export function payBooking(id: string, req: PayBookingRequest) {
   });
 }
 
+export interface LegFlightStatus {
+  sequence: number;
+  flightNo: string;
+  flightStatus: "SCHEDULED" | "ON_TIME" | "DELAYED" | "DEPARTED" | "ARRIVED" | "CANCELLED" | "UNKNOWN";
+  departureTerminal?: string;
+  departureGate?: string;
+  arrivalTerminal?: string;
+  arrivalGate?: string;
+  estimatedDeparture?: string;
+  estimatedArrival?: string;
+}
+
+export function getFlightStatus(bookingId: string) {
+  return apiFetch<{ statuses: LegFlightStatus[] }>(`/bookings/${encodeURIComponent(bookingId)}/status`);
+}
+
+export function cancelBooking(bookingId: string, reason?: string) {
+  return apiFetch<Booking>(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export interface PresignedUpload {
+  uploadUrl: string;
+  key: string;
+  publicUrl: string;
+}
+
+export type TravelDocContentType = "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+
+export function presignTravelDocument(bookingId: string, contentType: TravelDocContentType) {
+  return apiFetch<PresignedUpload>(`/bookings/${encodeURIComponent(bookingId)}/documents/presign`, {
+    method: "POST",
+    body: JSON.stringify({ contentType }),
+  });
+}
+
+export function addTravelDocument(bookingId: string, input: { key: string; url: string; label: string }) {
+  return apiFetch<TravelDocument>(`/bookings/${encodeURIComponent(bookingId)}/documents`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export const TRAVEL_WHY = [
   {
     icon: "search" as const,
@@ -251,15 +366,18 @@ export const SPECIAL_REQUESTS = [
   "Frequent flyer number",
 ];
 
-export const FARE_RULES = [
-  { icon: "briefcase" as const, k: "Checked baggage", v: "1 × 23 kg per passenger" },
-  { icon: "package" as const, k: "Cabin baggage", v: "1 bag + 1 personal item" },
-  { icon: "refresh" as const, k: "Changes", v: "$90 fee + fare difference" },
-  { icon: "x" as const, k: "Cancellation", v: "Refund minus $150 before departure" },
-  { icon: "user" as const, k: "Passenger info", v: "Passport required · UK visa may apply" },
-  { icon: "clock" as const, k: "No-show", v: "Fare forfeited, taxes refundable" },
-];
-
 export function minutesToHm(min: number) {
   return `${Math.floor(min / 60)}h ${min % 60}m`;
+}
+
+export function tripTypeLabel(t: TripType) {
+  switch (t) {
+    case "ONE_WAY":
+      return "one-way";
+    case "MULTI_CITY":
+      return "multi-city";
+    case "ROUND_TRIP":
+    default:
+      return "return";
+  }
 }

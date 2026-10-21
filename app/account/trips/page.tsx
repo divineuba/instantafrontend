@@ -15,6 +15,9 @@ import { ApiError } from "@/lib/api";
 import {
   getTrips,
   addPassenger,
+  updatePassenger,
+  deletePassenger,
+  type SavedPassenger,
   type TripsResponse,
 } from "@/lib/account";
 
@@ -34,9 +37,12 @@ export default function TripsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [showForm, setShowForm] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState(emptyForm);
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null);
   const toast = useToast();
 
   const load = React.useCallback(() => {
@@ -54,20 +60,63 @@ export default function TripsPage() {
     load();
   }, [load]);
 
-  async function handleAddPassenger(e: React.FormEvent) {
+  function openAddForm() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setFormError(null);
+    setShowForm((v) => !v);
+  }
+
+  function openEditForm(p: SavedPassenger) {
+    setEditingId(p.id);
+    setForm({
+      firstName: p.firstName,
+      lastName: p.lastName,
+      dob: p.dob,
+      gender: p.gender,
+      nationality: p.nationality,
+      passportNumber: p.passportNumber,
+      passportCountry: p.passportCountry,
+      passportExpiry: p.passportExpiry,
+    });
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  async function handleSubmitPassenger(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setFormError(null);
     try {
-      await addPassenger(form);
+      if (editingId) {
+        await updatePassenger(editingId, form);
+        toast("Passenger updated.", "success");
+      } else {
+        await addPassenger(form);
+        toast("Passenger saved.", "success");
+      }
       setForm(emptyForm);
+      setEditingId(null);
       setShowForm(false);
       load();
-      toast("Passenger saved.", "success");
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Couldn't save passenger.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeletePassenger(id: string) {
+    setDeletingId(id);
+    try {
+      await deletePassenger(id);
+      setConfirmDeleteId(null);
+      load();
+      toast("Passenger removed.", "success");
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "Couldn't remove passenger.", "error");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -173,14 +222,14 @@ export default function TripsPage() {
       <div>
         <div className="flex items-center justify-between mb-2.5">
           <SectionKicker>Saved passengers</SectionKicker>
-          <Button variant="ghost" onClick={() => setShowForm((v) => !v)}>
+          <Button variant="ghost" onClick={openAddForm}>
             <Icon name="plus" size={14} /> Add passenger
           </Button>
         </div>
 
         {showForm && (
           <form
-            onSubmit={handleAddPassenger}
+            onSubmit={handleSubmitPassenger}
             className="flex flex-col gap-3 bg-card border border-divider rounded-lg p-4 mb-3"
           >
             {formError && <div className="text-sm text-error">{formError}</div>}
@@ -248,11 +297,18 @@ export default function TripsPage() {
               </Field>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save passenger"}
+                {saving ? "Saving…" : editingId ? "Save changes" : "Save passenger"}
               </Button>
             </div>
           </form>
@@ -275,6 +331,40 @@ export default function TripsPage() {
                     {p.nationality} · Passport {p.passportNumber}
                   </span>
                 </span>
+                {confirmDeleteId === p.id ? (
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      variant="ghost"
+                      className="text-error px-2"
+                      disabled={deletingId === p.id}
+                      onClick={() => handleDeletePassenger(p.id)}
+                    >
+                      {deletingId === p.id ? "Removing…" : "Confirm"}
+                    </Button>
+                    <Button variant="ghost" className="px-2" onClick={() => setConfirmDeleteId(null)}>
+                      Cancel
+                    </Button>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Edit passenger"
+                      onClick={() => openEditForm(p)}
+                      className="size-8 grid place-items-center text-neutral-600 hover:text-text hover:bg-neutral-100 rounded-md cursor-pointer border-0 bg-transparent"
+                    >
+                      <Icon name="pen" size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Remove passenger"
+                      onClick={() => setConfirmDeleteId(p.id)}
+                      className="size-8 grid place-items-center text-neutral-600 hover:text-error hover:bg-[#fef2f2] rounded-md cursor-pointer border-0 bg-transparent"
+                    >
+                      <Icon name="trash" size={15} />
+                    </button>
+                  </span>
+                )}
               </div>
             ))}
           </div>

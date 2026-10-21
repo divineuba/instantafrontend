@@ -22,7 +22,7 @@ export function PaymentForm({ booking: initialBooking }: { booking: Booking }) {
   const [method, setMethod] = React.useState<PaymentMethodKey>("CARD");
   const [cardNumber, setCardNumber] = React.useState("4821 4821 4821 0093");
   const [nameOnCard, setNameOnCard] = React.useState(
-    `${booking.passengerFirstName} ${booking.passengerLastName}`,
+    booking.passengers[0] ? `${booking.passengers[0].firstName} ${booking.passengers[0].lastName}` : "",
   );
   const [expiry, setExpiry] = React.useState("08 / 28");
   const [cvv, setCvv] = React.useState("123");
@@ -162,12 +162,15 @@ export function PaymentForm({ booking: initialBooking }: { booking: Booking }) {
         <div className="flex justify-between text-sm gap-3">
           <span className="text-neutral-700">Flight</span>
           <span className="text-right">
-            {booking.offer.outboundFlightNo} / {booking.offer.returnFlightNo} · {booking.offer.originCode} ⇄ {booking.offer.destinationCode}
+            {booking.offer.legs.map((l) => l.flightNo).join(" / ")} · {booking.offer.legs[0].originCode} ⇄ {booking.offer.legs[booking.offer.legs.length - 1].destinationCode}
           </span>
         </div>
         <div className="flex justify-between text-sm gap-3">
-          <span className="text-neutral-700">Passenger</span>
-          <span className="text-right">1 adult · {booking.passengerFirstName} {booking.passengerLastName}</span>
+          <span className="text-neutral-700">Passenger{booking.passengers.length > 1 ? "s" : ""}</span>
+          <span className="text-right">
+            {booking.passengers.length} adult{booking.passengers.length > 1 ? "s" : ""} ·{" "}
+            {booking.passengers.map((p) => `${p.firstName} ${p.lastName}`).join(", ")}
+          </span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-700">Base fare</span>
