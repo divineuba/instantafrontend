@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { fmtUsd, payBooking, type Booking, type PaymentMethodKey } from "@/lib/travels";
+import { bookingHref, fmtUsd, payBooking, type Booking, type PaymentMethodKey } from "@/lib/travels";
 import { useFieldErrors } from "@/lib/use-field-errors";
 
 type CardField = "cardNumber" | "nameOnCard" | "expiry" | "cvv";
@@ -45,7 +45,7 @@ export function PaymentForm({ booking: initialBooking }: { booking: Booking }) {
     if (method === "CARD" && !validateAll(cardValidators)) return;
     setSubmitting(true);
     try {
-      const res = await payBooking(booking.id, {
+      const res = await payBooking(booking.id, booking.accessKey, {
         method,
         cardNumber: method === "CARD" ? cardNumber : undefined,
       });
@@ -54,7 +54,7 @@ export function PaymentForm({ booking: initialBooking }: { booking: Booking }) {
         setDeclined(true);
         window.scrollTo(0, 0);
       } else {
-        router.push(`/travels/confirmed?booking=${booking.id}`);
+        router.push(bookingHref("confirmed", booking));
       }
     } catch {
       setDeclined(true);

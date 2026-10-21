@@ -247,6 +247,9 @@ export interface RefundRequest {
 
 export interface Booking {
   id: string;
+  /** Capability key from the backend: the owner or anyone holding it can
+   * load/pay this booking. Carried in the payment/confirmed page links. */
+  accessKey: string;
   bookingRef: string;
   offerId: string;
   offer: FlightOffer;
@@ -275,8 +278,17 @@ export function createBooking(req: CreateBookingRequest) {
   });
 }
 
-export function getBooking(id: string) {
-  return apiFetch<Booking>(`/bookings/${encodeURIComponent(id)}`);
+function bookingKeyHeaders(accessKey: string | undefined): HeadersInit {
+  return accessKey ? { "X-Booking-Key": accessKey } : {};
+}
+
+/** Link to a booking's payment or confirmation page, carrying its access key. */
+export function bookingHref(page: "payment" | "confirmed", booking: Pick<Booking, "id" | "accessKey">) {
+  return `/travels/${page}?booking=${encodeURIComponent(booking.id)}&key=${encodeURIComponent(booking.accessKey)}`;
+}
+
+export function getBooking(id: string, accessKey?: string) {
+  return apiFetch<Booking>(`/bookings/${encodeURIComponent(id)}`, { headers: bookingKeyHeaders(accessKey) });
 }
 
 export interface PayBookingRequest {
@@ -289,9 +301,10 @@ export interface PayBookingResponse {
   booking: Booking;
 }
 
-export function payBooking(id: string, req: PayBookingRequest) {
+export function payBooking(id: string, accessKey: string, req: PayBookingRequest) {
   return apiFetch<PayBookingResponse>(`/bookings/${encodeURIComponent(id)}/payment`, {
     method: "POST",
+    headers: bookingKeyHeaders(accessKey),
     body: JSON.stringify(req),
   });
 }
@@ -308,8 +321,10 @@ export interface LegFlightStatus {
   estimatedArrival?: string;
 }
 
-export function getFlightStatus(bookingId: string) {
-  return apiFetch<{ statuses: LegFlightStatus[] }>(`/bookings/${encodeURIComponent(bookingId)}/status`);
+export function getFlightStatus(bookingId: string, accessKey: string) {
+  return apiFetch<{ statuses: LegFlightStatus[] }>(`/bookings/${encodeURIComponent(bookingId)}/status`, {
+    headers: bookingKeyHeaders(accessKey),
+  });
 }
 
 export function cancelBooking(bookingId: string, reason?: string) {

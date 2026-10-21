@@ -267,7 +267,10 @@ export interface DeliveryPackage {
   notes: string | null;
 }
 
+/** The full delivery, returned to its owner, to whoever proves the pickup or
+ * destination phone, and from createDelivery. */
 export interface Delivery {
+  access: "full";
   id: string;
   trackingId: string;
   pickupAddress: string;
@@ -303,6 +306,24 @@ export interface Delivery {
   trackState: "picked" | "transit" | "out" | "delivered" | "notfound";
 }
 
+/** What a tracking ID alone shows: progress only. Contacts, addresses, the
+ * route, the package and the price need the owner or the phone proof. */
+export interface DeliveryPublicView {
+  access: "limited";
+  trackingId: string;
+  status: DeliveryStatusKey;
+  trackState: Delivery["trackState"];
+  speed: DeliverySpeedKey;
+  scheduledFor: string | null;
+  eta: string | null;
+  /** First name and last initial only. */
+  riderName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TrackedDelivery = Delivery | DeliveryPublicView;
+
 export interface DeliveryMessage {
   id: string;
   deliveryId: string;
@@ -327,17 +348,27 @@ export function createDelivery(req: CreateDeliveryRequest) {
   });
 }
 
-export function trackDelivery(trackingId: string) {
-  return apiFetch<Delivery>(`/deliveries/${encodeURIComponent(trackingId)}`);
+/** The phone proof goes in a header so it never lands in a URL. */
+function trackingPhoneHeaders(phone: string | undefined): HeadersInit {
+  return phone ? { "X-Tracking-Phone": phone } : {};
 }
 
-export function listDeliveryMessages(trackingId: string) {
-  return apiFetch<DeliveryMessage[]>(`/deliveries/${encodeURIComponent(trackingId)}/messages`);
+export function trackDelivery(trackingId: string, phone?: string) {
+  return apiFetch<TrackedDelivery>(`/deliveries/${encodeURIComponent(trackingId)}`, {
+    headers: trackingPhoneHeaders(phone),
+  });
 }
 
-export function sendDeliveryMessage(trackingId: string, body: string) {
+export function listDeliveryMessages(trackingId: string, phone?: string) {
+  return apiFetch<DeliveryMessage[]>(`/deliveries/${encodeURIComponent(trackingId)}/messages`, {
+    headers: trackingPhoneHeaders(phone),
+  });
+}
+
+export function sendDeliveryMessage(trackingId: string, body: string, phone?: string) {
   return apiFetch<DeliveryMessage>(`/deliveries/${encodeURIComponent(trackingId)}/messages`, {
     method: "POST",
+    headers: trackingPhoneHeaders(phone),
     body: JSON.stringify({ body }),
   });
 }

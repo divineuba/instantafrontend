@@ -14,6 +14,8 @@ import {
   listDeliveryMessages,
   type Delivery,
   type DeliveryMessage,
+  type DeliveryPublicView,
+  type TrackedDelivery,
   type DeliveryStatusKey,
   SPEEDS,
   WEIGHT_BANDS,
@@ -34,7 +36,7 @@ const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: stri
 /** Mirrors the backend's status→trackState mapping so a socket-pushed status
  * (which only carries the raw enum) can be folded into the UI's stage model
  * without a full refetch. */
-const STATUS_TO_TRACK_STATE: Record<DeliveryStatusKey, Delivery["trackState"]> = STATUS_TO_STAGE;
+const STATUS_TO_TRACK_STATE: Record<DeliveryStatusKey, TrackedDelivery["trackState"]> = STATUS_TO_STAGE;
 
 function formatTime(iso: string | null) {
   if (!iso) return "—";
@@ -155,21 +157,60 @@ function RouteMap({ delivery }: { delivery: Delivery }) {
   );
 }
 
+function StageStrip({ delivery }: { delivery: Pick<TrackedDelivery, "trackState" | "eta"> }) {
+  const idx = STAGE_ORDER.indexOf(delivery.trackState as (typeof STAGE_ORDER)[number]);
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-divider mb-6 grid grid-cols-2 sm:grid-cols-4">
+      {STAGE_DEFS.map((s, i) => {
+        const done = i < idx || delivery.trackState === "delivered";
+        const current = i === idx && delivery.trackState !== "delivered";
+        return (
+          <div
+            key={s.key}
+            className={`p-5 flex flex-col gap-2.5 border-r border-divider last:border-r-0 ${
+              current ? "bg-accent-100/40" : ""
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`size-[26px] rounded-xl flex items-center justify-center border ${
+                  done
+                    ? "bg-accent border-accent text-white"
+                    : current
+                      ? "bg-white border-accent text-accent"
+                      : "bg-transparent border-divider text-neutral-500"
+                }`}
+              >
+                <Icon name={s.icon} size={14} />
+              </span>
+              <span className={`text-xl font-semibold ${i <= idx ? "text-text" : "text-neutral-500"}`}>
+                {s.label}
+              </span>
+            </div>
+            <span className="text-[13px] text-neutral-700">
+              {i === idx && delivery.trackState !== "delivered"
+                ? `Est. ${formatTime(delivery.eta)}`
+                : i <= idx
+                  ? formatTime(delivery.eta)
+                  : "—"}
+            </span>
+            <span className={`h-[3px] ${done ? "bg-accent" : "bg-neutral-300"}`} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChatPanel({
   messages,
   live,
-  phoneInput,
-  onPhoneInputChange,
-  onUnlock,
   chatInput,
   onChatInputChange,
   onSend,
 }: {
   messages: DeliveryMessage[];
   live: boolean;
-  phoneInput: string;
-  onPhoneInputChange: (v: string) => void;
-  onUnlock: () => void;
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSend: () => void;
@@ -178,20 +219,7 @@ function ChatPanel({
     <div className="p-5 rounded-xl border border-divider bg-card flex flex-col gap-3">
       <div className="text-xl font-semibold">Support chat</div>
       {!live && (
-        <div className="flex flex-col gap-2 p-3 rounded-lg bg-accent-100/40 text-[13px]">
-          <span>Enter the phone number used to book this delivery to unlock live chat and updates.</span>
-          <div className="flex gap-2">
-            <Input
-              value={phoneInput}
-              onChange={(e) => onPhoneInputChange(e.target.value)}
-              placeholder="Phone number"
-              className="h-9"
-            />
-            <Button variant="secondary" className="h-9 shrink-0" onClick={onUnlock}>
-              Unlock
-            </Button>
-          </div>
-        </div>
+        <div className="p-3 rounded-lg bg-accent-100/40 text-[13px]">Connecting to live chat…</div>
       )}
       <div className="flex flex-col gap-2 max-h-64 overflow-auto">
         {messages.length === 0 && <p className="text-sm text-neutral-600 m-0">No messages yet.</p>}
@@ -217,7 +245,7 @@ function ChatPanel({
         <Input
           value={chatInput}
           onChange={(e) => onChatInputChange(e.target.value)}
-          placeholder={live ? "Message support…" : "Unlock chat above to send a message"}
+          placeholder={live ? "Message support…" : "Waiting for live chat…"}
           disabled={!live}
           className="h-9"
         />
@@ -233,9 +261,6 @@ function TrackResult({
   delivery,
   live,
   messages,
-  phoneInput,
-  onPhoneInputChange,
-  onUnlock,
   chatInput,
   onChatInputChange,
   onSendChat,
@@ -243,9 +268,6 @@ function TrackResult({
   delivery: Delivery;
   live: boolean;
   messages: DeliveryMessage[];
-  phoneInput: string;
-  onPhoneInputChange: (v: string) => void;
-  onUnlock: () => void;
   chatInput: string;
   onChatInputChange: (v: string) => void;
   onSendChat: () => void;
@@ -289,45 +311,7 @@ function TrackResult({
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-xl border border-divider mb-6 grid grid-cols-2 sm:grid-cols-4">
-        {STAGE_DEFS.map((s, i) => {
-          const done = i < idx || delivery.trackState === "delivered";
-          const current = i === idx && delivery.trackState !== "delivered";
-          return (
-            <div
-              key={s.key}
-              className={`p-5 flex flex-col gap-2.5 border-r border-divider last:border-r-0 ${
-                current ? "bg-accent-100/40" : ""
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={`size-[26px] rounded-xl flex items-center justify-center border ${
-                    done
-                      ? "bg-accent border-accent text-white"
-                      : current
-                        ? "bg-white border-accent text-accent"
-                        : "bg-transparent border-divider text-neutral-500"
-                  }`}
-                >
-                  <Icon name={s.icon} size={14} />
-                </span>
-                <span className={`text-xl font-semibold ${i <= idx ? "text-text" : "text-neutral-500"}`}>
-                  {s.label}
-                </span>
-              </div>
-              <span className="text-[13px] text-neutral-700">
-                {i === idx && delivery.trackState !== "delivered"
-                  ? `Est. ${formatTime(delivery.eta)}`
-                  : i <= idx
-                    ? formatTime(delivery.eta)
-                    : "—"}
-              </span>
-              <span className={`h-[3px] ${done ? "bg-accent" : "bg-neutral-300"}`} />
-            </div>
-          );
-        })}
-      </div>
+      <StageStrip delivery={delivery} />
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
         <RouteMap delivery={delivery} />
@@ -393,9 +377,6 @@ function TrackResult({
             <ChatPanel
               messages={messages}
               live={live}
-              phoneInput={phoneInput}
-              onPhoneInputChange={onPhoneInputChange}
-              onUnlock={onUnlock}
               chatInput={chatInput}
               onChatInputChange={onChatInputChange}
               onSend={onSendChat}
@@ -426,6 +407,75 @@ function TrackResult({
             </LinkButton>
           </div>
         </div>
+      </div>
+    </>
+  );
+}
+
+/** What a tracking ID alone gets: progress and ETA, plus the phone check
+ * that unlocks the full view (route, contacts, package, chat). */
+function LimitedTrackResult({
+  delivery,
+  phoneInput,
+  onPhoneInputChange,
+  onUnlock,
+  phoneRejected,
+}: {
+  delivery: DeliveryPublicView;
+  phoneInput: string;
+  onPhoneInputChange: (v: string) => void;
+  onUnlock: () => void;
+  phoneRejected: boolean;
+}) {
+  const speed = SPEEDS.find((s) => s.key === delivery.speed);
+  return (
+    <>
+      <StageStrip delivery={delivery} />
+      <div className="grid md:grid-cols-2 gap-6 items-start">
+        <div className="p-5 rounded-xl border border-divider bg-card flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">
+            {delivery.trackState === "delivered" ? "Delivered at" : "Estimated arrival"}
+          </span>
+          <span className="text-[48px] sm:text-[64px] font-semibold leading-none text-accent-700">
+            {formatTime(delivery.eta)}
+          </span>
+          <span className="text-sm text-neutral-700">
+            {speed?.name ?? delivery.speed}
+            {delivery.riderName ? ` · Rider ${delivery.riderName}` : ""}
+          </span>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onUnlock();
+          }}
+          className="p-5 rounded-xl border border-divider bg-card flex flex-col gap-3 text-[13px]"
+        >
+          <div className="text-xl font-semibold">See full details</div>
+          <span>
+            Enter the pickup or recipient phone number for this delivery to see the route, contacts and
+            package, and to chat with support.
+          </span>
+          <div className="flex gap-2">
+            <Input
+              value={phoneInput}
+              onChange={(e) => onPhoneInputChange(e.target.value)}
+              placeholder="Phone number"
+              type="tel"
+              autoComplete="tel"
+              aria-label="Phone number"
+              className="h-9"
+            />
+            <Button type="submit" variant="secondary" className="h-9 shrink-0" disabled={!phoneInput.trim()}>
+              Unlock
+            </Button>
+          </div>
+          {phoneRejected && (
+            <span role="alert" className="text-error">
+              That number doesn&apos;t match this delivery.
+            </span>
+          )}
+        </form>
       </div>
     </>
   );
@@ -490,13 +540,14 @@ function TrackPageInner() {
   const initialId = searchParams.get("id") ?? "";
 
   const [inputId, setInputId] = React.useState(initialId);
-  const [delivery, setDelivery] = React.useState<Delivery | null>(null);
+  const [delivery, setDelivery] = React.useState<TrackedDelivery | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [searchedId, setSearchedId] = React.useState<string | null>(null);
   const [error, setError] = React.useState(false);
 
   const [phone, setPhone] = React.useState("");
   const [phoneInput, setPhoneInput] = React.useState("");
+  const [phoneRejected, setPhoneRejected] = React.useState(false);
   const [live, setLive] = React.useState(false);
   const [messages, setMessages] = React.useState<DeliveryMessage[]>([]);
   const [chatInput, setChatInput] = React.useState("");
@@ -507,6 +558,8 @@ function TrackPageInner() {
     setLoading(true);
     setSearchedId(id);
     setError(false);
+    setPhone("");
+    setPhoneRejected(false);
     try {
       const d = await trackDelivery(id.trim());
       setDelivery(d);
@@ -527,20 +580,44 @@ function TrackPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** Re-asks for the delivery with the phone proof; the backend decides
+   * whether it matches and answers with the full or the limited view. */
+  async function unlock() {
+    if (!delivery) return;
+    const candidate = phoneInput.trim();
+    if (!candidate) return;
+    setPhoneRejected(false);
+    try {
+      const d = await trackDelivery(delivery.trackingId, candidate);
+      if (d.access === "full") {
+        setPhone(candidate);
+        setDelivery(d);
+      } else {
+        setPhoneRejected(true);
+      }
+    } catch {
+      setPhoneRejected(true);
+    }
+  }
+
+  const fullAccess = delivery?.access === "full";
+
   React.useEffect(() => {
-    if (!delivery) {
+    if (!delivery || !fullAccess) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([]);
       return;
     }
-    listDeliveryMessages(delivery.trackingId)
+    listDeliveryMessages(delivery.trackingId, phone || undefined)
       .then(setMessages)
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [delivery?.trackingId]);
+  }, [delivery?.trackingId, fullAccess, phone]);
 
   React.useEffect(() => {
-    if (!delivery) return;
+    // The socket asks for the same proof as the full view, so there's no
+    // point connecting with the tracking ID alone.
+    if (!delivery || !fullAccess) return;
     const trackingId = delivery.trackingId;
     const socket = connectTrackingSocket(trackingId, phone || undefined);
     socketRef.current = socket;
@@ -562,7 +639,7 @@ function TrackPageInner() {
       socketRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [delivery?.trackingId, phone]);
+  }, [delivery?.trackingId, fullAccess, phone]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -611,14 +688,20 @@ function TrackPageInner() {
         </Button>
       </form>
 
-      {searchedId && !loading && delivery && (
+      {searchedId && !loading && delivery?.access === "limited" && (
+        <LimitedTrackResult
+          delivery={delivery}
+          phoneInput={phoneInput}
+          onPhoneInputChange={setPhoneInput}
+          onUnlock={unlock}
+          phoneRejected={phoneRejected}
+        />
+      )}
+      {searchedId && !loading && delivery?.access === "full" && (
         <TrackResult
           delivery={delivery}
           live={live}
           messages={messages}
-          phoneInput={phoneInput}
-          onPhoneInputChange={setPhoneInput}
-          onUnlock={() => setPhone(phoneInput.trim())}
           chatInput={chatInput}
           onChatInputChange={setChatInput}
           onSendChat={sendChat}

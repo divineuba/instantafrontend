@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { LinkButton } from "@/components/ui/button";
 import { ConfirmedActions } from "@/components/travels/confirmed-actions";
 import { BookingManagement } from "@/components/travels/booking-management";
-import { getBooking } from "@/lib/travels";
+import { bookingHref, getBooking } from "@/lib/travels";
 import { ApiError } from "@/lib/api";
 
 // See app/travels/detail/page.tsx same reasoning: depends on ?booking= and
@@ -41,17 +41,17 @@ function renderQr(seedStr: string) {
 export default async function TravelsConfirmedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string }>;
+  searchParams: Promise<{ booking?: string; key?: string }>;
 }) {
-  const { booking: bookingId } = await searchParams;
+  const { booking: bookingId, key } = await searchParams;
   if (!bookingId) notFound();
 
-  const booking = await getBooking(bookingId).catch((err) => {
+  const booking = await getBooking(bookingId, key).catch((err) => {
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;
   });
   if (!booking) notFound();
-  if (booking.status !== "CONFIRMED") redirect(`/travels/payment?booking=${booking.id}`);
+  if (booking.status !== "CONFIRMED") redirect(bookingHref("payment", booking));
 
   const { offer } = booking;
   const qr = renderQr(booking.bookingRef);

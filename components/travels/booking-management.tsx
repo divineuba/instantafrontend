@@ -34,7 +34,15 @@ const STATUS_COLOR: Record<LegFlightStatus["flightStatus"], string> = {
   UNKNOWN: "bg-neutral-200 text-neutral-600",
 };
 
-function FlightStatusSection({ bookingId, legCount }: { bookingId: string; legCount: number }) {
+function FlightStatusSection({
+  bookingId,
+  accessKey,
+  legCount,
+}: {
+  bookingId: string;
+  accessKey: string;
+  legCount: number;
+}) {
   const [statuses, setStatuses] = React.useState<LegFlightStatus[] | null>(null);
   const [error, setError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -43,11 +51,11 @@ function FlightStatusSection({ bookingId, legCount }: { bookingId: string; legCo
     // Live status is a genuine fetch-on-mount sync with an external system.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    getFlightStatus(bookingId)
+    getFlightStatus(bookingId, accessKey)
       .then((res) => setStatuses(res.statuses))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [bookingId]);
+  }, [bookingId, accessKey]);
 
   if (loading) return <div className="text-sm text-neutral-600">Checking live flight status…</div>;
   if (error || !statuses?.length) {
@@ -228,7 +236,7 @@ export function BookingManagement({ booking: initialBooking }: { booking: Bookin
     <div className="grid md:grid-cols-3 gap-4">
       <div className="p-5 border border-divider rounded-xl bg-card flex flex-col gap-3">
         <span className="text-sm font-semibold">Flight status</span>
-        <FlightStatusSection bookingId={booking.id} legCount={booking.offer.legs.length} />
+        <FlightStatusSection bookingId={booking.id} accessKey={booking.accessKey} legCount={booking.offer.legs.length} />
       </div>
       <div className="p-5 border border-divider rounded-xl bg-card flex flex-col gap-3">
         <span className="text-sm font-semibold">Travel documents</span>

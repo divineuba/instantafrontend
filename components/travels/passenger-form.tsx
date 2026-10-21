@@ -7,7 +7,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icon";
 import { Radio } from "@/components/ui/radio";
 import { ApiError } from "@/lib/api";
-import { createBooking, fmtUsd, SPECIAL_REQUESTS, type FlightOffer, type PassengerInput } from "@/lib/travels";
+import { bookingHref, createBooking, fmtUsd, SPECIAL_REQUESTS, type FlightOffer, type PassengerInput } from "@/lib/travels";
 import type { SavedPassenger } from "@/lib/account";
 import { useFieldErrors } from "@/lib/use-field-errors";
 
@@ -135,7 +135,7 @@ export function PassengerForm({
         contactEmail,
         contactPhone,
       });
-      router.push(`/travels/payment?booking=${booking.id}`);
+      router.push(bookingHref("payment", booking));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {

@@ -13,12 +13,12 @@ export const instant = false;
 export default async function TravelsPaymentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string }>;
+  searchParams: Promise<{ booking?: string; key?: string }>;
 }) {
-  const { booking: bookingId } = await searchParams;
+  const { booking: bookingId, key } = await searchParams;
   if (!bookingId) notFound();
 
-  const booking = await getBooking(bookingId).catch((err) => {
+  const booking = await getBooking(bookingId, key).catch((err) => {
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;
   });
