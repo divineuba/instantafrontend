@@ -32,6 +32,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       const list = await getWorkspaces();
       setMemberships(list);
+    } catch {
+      setMemberships([]);
     } finally {
       setLoading(false);
     }

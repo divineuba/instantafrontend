@@ -47,6 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = React.useCallback(async () => {
     try {
       await apiLogout();
+    } catch {
+      // Already logged-out server-side, or the request failed — either way
+      // the client should still drop its local session.
     } finally {
       setUser(null);
     }
