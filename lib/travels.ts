@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 
 export function fmtUsd(n: number | string) {
   const v = typeof n === "string" ? Number(n) : n;
@@ -189,6 +189,16 @@ export interface CreateBookingRequest {
   contactEmail: string;
   contactPhone: string;
   workspaceId?: string;
+  /** The total the traveler was shown. The backend re-confirms the fare and
+   * answers 409 PRICE_CHANGED instead of booking if it no longer matches. */
+  expectedTotal?: number;
+}
+
+/** The new fare from a 409 PRICE_CHANGED response, or null for any other error. */
+export function changedFare(err: unknown): number | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const body = err.body as { code?: unknown; price?: unknown } | null;
+  return body?.code === "PRICE_CHANGED" && typeof body.price === "number" ? body.price : null;
 }
 
 export type BookingStatus = "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED";

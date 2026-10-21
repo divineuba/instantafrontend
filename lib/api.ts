@@ -3,9 +3,13 @@ export const API_BASE_URL =
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** The parsed error response, for callers that act on fields beyond the
+   * message (e.g. a machine-readable `code`). */
+  body: unknown;
+  constructor(status: number, message: string, body: unknown = null) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -57,6 +61,7 @@ export async function apiFetch<T>(
     throw new ApiError(
       res.status,
       body?.message ?? `Request failed with status ${res.status}`,
+      body,
     );
   }
 

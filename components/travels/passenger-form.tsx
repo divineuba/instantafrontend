@@ -7,7 +7,15 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icon";
 import { Radio } from "@/components/ui/radio";
 import { ApiError } from "@/lib/api";
-import { bookingHref, createBooking, fmtUsd, SPECIAL_REQUESTS, type FlightOffer, type PassengerInput } from "@/lib/travels";
+import {
+  bookingHref,
+  changedFare,
+  createBooking,
+  fmtUsd,
+  SPECIAL_REQUESTS,
+  type FlightOffer,
+  type PassengerInput,
+} from "@/lib/travels";
 import type { SavedPassenger } from "@/lib/account";
 import { useFieldErrors } from "@/lib/use-field-errors";
 
@@ -57,6 +65,11 @@ export function PassengerForm({
   const [contactPhone, setContactPhone] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // The fare the traveler is agreeing to. Starts at the search price; if the
+  // backend reports a change, it becomes the re-confirmed fare and the
+  // traveler has to press continue again to accept it.
+  const [shownTotal, setShownTotal] = React.useState(() => Number(offer.price));
+  const [fareChangedFrom, setFareChangedFrom] = React.useState<number | null>(null);
   const { errors, setFieldError, validateAll } = useFieldErrors<FieldKey | ContactFieldKey>();
 
   function validatorsFor(i: number): Record<FieldKey, () => string | undefined> {
@@ -134,9 +147,16 @@ export function PassengerForm({
         specialRequests,
         contactEmail,
         contactPhone,
+        expectedTotal: shownTotal,
       });
       router.push(bookingHref("payment", booking));
     } catch (err) {
+      const newFare = changedFare(err);
+      if (newFare !== null) {
+        setFareChangedFrom(shownTotal);
+        setShownTotal(newFare);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
@@ -329,15 +349,21 @@ export function PassengerForm({
         </div>
         <div className="flex justify-between items-end pt-3 border-t border-divider">
           <span className="text-sm">Total</span>
-          <span className="text-[36px] font-semibold leading-none">{fmtUsd(offer.price)}</span>
+          <span className="text-[36px] font-semibold leading-none">{fmtUsd(shownTotal)}</span>
         </div>
+        {fareChangedFrom !== null && (
+          <p role="alert" className="text-sm m-0 p-3 rounded-md bg-accent-100 text-accent-800">
+            The airline changed this fare from {fmtUsd(fareChangedFrom)} to {fmtUsd(shownTotal)}. Continue to book at
+            the new price, or go back to choose another flight.
+          </p>
+        )}
         <button
           type="button"
           disabled={!canSubmit || submitting}
           onClick={handleSubmit}
           className="h-11 text-base inline-flex items-center justify-center gap-[7px] whitespace-nowrap font-semibold rounded-[0.4rem] bg-accent hover:bg-accent-700 text-white border-0 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
         >
-          {submitting ? "Booking…" : "Continue to payment"}
+          {submitting ? "Booking…" : fareChangedFrom !== null ? "Accept new fare and continue" : "Continue to payment"}
         </button>
         <LinkButton href={`/travels/detail?offer=${offer.id}&adults=${passengers.length}`} variant="ghost">
           Back

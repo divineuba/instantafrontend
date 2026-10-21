@@ -42,6 +42,8 @@ export default async function TravelsDetailPage({
     "Fare conditions vary by airline — confirm the exact rules at booking.",
   ];
 
+  // Without a live confirmation only the search price is known, and it is
+  // shown as such: no breakdown, and booking re-confirms it.
   const total = priced?.price ?? Number(offer.price);
   const serviceFee = 12;
   const baseFare = Math.round((total - serviceFee) * 0.76 * 100) / 100;
@@ -133,22 +135,31 @@ export default async function TravelsDetailPage({
 
         <aside className="p-6 border border-divider rounded-xl bg-card sticky top-6 flex flex-col gap-3">
           <span className="text-xl font-semibold">Fare summary</span>
-          <div className="flex justify-between text-sm">
-            <span className="text-neutral-700">
-              {adults} adult{adults > 1 ? "s" : ""} · {offer.fareLabel}
-            </span>
-            <span>{fmtUsd(baseFare)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-neutral-700">Taxes and charges</span>
-            <span>{fmtUsd(taxes)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-neutral-700">Instanta service fee</span>
-            <span>{fmtUsd(serviceFee)}</span>
-          </div>
+          {priced ? (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-700">
+                  {adults} adult{adults > 1 ? "s" : ""} · {offer.fareLabel}
+                </span>
+                <span>{fmtUsd(baseFare)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-700">Taxes and charges</span>
+                <span>{fmtUsd(taxes)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-700">Instanta service fee</span>
+                <span>{fmtUsd(serviceFee)}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-neutral-700 m-0">
+              We couldn&apos;t confirm this fare with the airline just now. This is the price from your search; it will
+              be re-checked before you book.
+            </p>
+          )}
           <div className="flex justify-between items-end pt-3 border-t border-divider">
-            <span className="text-sm">Total</span>
+            <span className="text-sm">{priced ? "Total" : "Search price"}</span>
             <span className="text-[40px] font-semibold leading-none">{fmtUsd(total)}</span>
           </div>
           <LinkButton href={`/travels/passengers?offer=${offer.id}&adults=${adults}`} variant="primary" className="h-11 text-base">
@@ -156,7 +167,7 @@ export default async function TravelsDetailPage({
           </LinkButton>
           <div className="text-xs text-neutral-600 flex gap-1.5">
             <Icon name="clock" size={14} />
-            Fare held for 20 minutes once you continue.
+            Fares can change until you book. If it changes, you&apos;ll see the new price before confirming.
           </div>
         </aside>
       </main>
