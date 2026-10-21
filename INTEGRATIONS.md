@@ -4,28 +4,20 @@ See `backend/INTEGRATIONS.md` for the payment-gateway, email, flight-search, obj
 
 ## Map tiles — Mapbox GL
 
-**Where:** `NEXT_PUBLIC_MAPBOX_TOKEN` env var, consumed by `mapbox-gl`/`react-map-gl` on the Logistics tracking page once that phase lands.
+**Where:** `NEXT_PUBLIC_MAPBOX_TOKEN` env var, consumed by `mapbox-gl`/`react-map-gl` (`react-map-gl/mapbox` subpath) on the Logistics tracking page (`app/logistics/track/page.tsx`) to render the real route polyline, pickup/destination/rider markers, and tiles.
 
 Same Mapbox account as the backend's `MAPBOX_ACCESS_TOKEN` (`backend/INTEGRATIONS.md`) — sign up free at https://account.mapbox.com and create a token scoped to this app's domain. The frontend token is a public, domain-restricted token (safe to ship to the browser); it is separate from the backend's secret token, which calls the Geocoding/Directions APIs server-side.
 
-## Geocoding / distance (superseded by backend Mapbox seam)
+If the token is unset, the tracking page shows a "map unavailable" placeholder instead of rendering a blank/broken map — it never fabricates a route.
 
-This local heuristic is being replaced by the backend's `GeocodingProvider`/Mapbox seam (`backend/INTEGRATIONS.md`) as part of the Logistics real-map phase — once that lands, `delivery.service.ts` will compute distance/route server-side instead of trusting a client-supplied estimate. Documented here until that phase replaces it.
+## Address autocomplete — Mapbox Geocoding API
 
-**Where:** `lib/logistics.ts` — `DistanceProvider` interface, `HeuristicZoneDistanceProvider` implementation, `distanceProvider` export.
+**Where:** `lib/logistics.ts` — `suggestAddresses()`, consumed by `components/logistics/address-autocomplete.tsx` on the booking wizard's pickup/destination fields.
 
-```ts
-export interface DistanceProvider {
-  resolveLabel(address: string): string | null;
-  estimateKm(pickupAddress: string, destinationAddress: string): number;
-}
-```
+Calls Mapbox's Geocoding API directly from the browser with the same public `NEXT_PUBLIC_MAPBOX_TOKEN` above. This is a UI convenience only: the backend's `GeocodingProvider` (`backend/INTEGRATIONS.md`) re-geocodes whatever address string the user actually submits, so an unset token just means no suggestion dropdown — not a broken quote/booking flow. There is no client-side distance estimate anywhere in this app anymore; `quoteDelivery`/`createDelivery` send address strings and the backend returns the real `distanceKm`/`durationMin`/route.
 
-There is no real geocoder. `HeuristicZoneDistanceProvider` matches free-text addresses against a fixed table of known Lagos-area neighbourhoods/cities (`KNOWN_AREAS`/`KNOWN_CITIES`) and estimates straight-line distance between their known lat/lng with the haversine formula; an address that doesn't match any known place falls back to a flat `FALLBACK_DISTANCE_KM`. This replaced the earlier hardcoded `MOCK_DISTANCE_KM` constant (same distance regardless of address) in Phase 8.5 — it's a transparent stand-in, not real geocoding, but at least reflects which addresses are near/far from each other.
+## Realtime — Socket.IO
 
-Every frontend call site (`logistics/book`, the homepage quick-quote) goes through `distanceProvider.estimateKm()`/`resolveLabel()`, never the raw table directly. The computed `distanceKm` is then sent to the backend as part of the quote/booking DTO — `delivery.service.ts` trusts the client-supplied distance rather than recomputing it, so there is only one place (this file) that needs to change.
+**Where:** `lib/logistics-socket.ts` — `connectTrackingSocket()`, consumed by the tracking page for live status updates (`delivery:update`) and support chat (`chat:send`/`chat:new`) over the backend's `/logistics` namespace. `lib/dating-socket.ts` — `getDatingSocket()`, the equivalent singleton for Love's `/dating` namespace.
 
-To wire in a real provider (Google Maps Distance Matrix, Mapbox, etc.):
-1. Implement `DistanceProvider` against the real API (likely needs to become async — current interface is sync since the heuristic has no I/O; call sites will need a small update to `await` it).
-2. Add the provider's API key as an env var.
-3. Swap the `distanceProvider` export's implementation; keep the interface so callers don't change.
+Guests (no login) additionally pass the phone number used to book the delivery in the handshake `auth` payload — the backend's `TrackingGuard` checks it against the delivery's contact phone. Without a matching phone (or an owning login session), the socket connection is rejected and the tracking page falls back to the one-time REST lookup with no live updates or chat.

@@ -6,11 +6,11 @@ import { Footer } from "@/components/chrome/footer";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { AddressAutocomplete } from "@/components/logistics/address-autocomplete";
 import { ApiError } from "@/lib/api";
 import {
   SPEEDS,
   WEIGHT_BANDS,
-  distanceProvider,
   fmtUsd,
   quoteDelivery,
   createDelivery,
@@ -19,6 +19,18 @@ import {
   type Delivery,
   type QuoteResponse,
 } from "@/lib/logistics";
+
+/** Quoting hits the backend's real Mapbox geocoding seam on every address
+ * keystroke, so debounce it rather than re-quoting on every character. */
+const QUOTE_DEBOUNCE_MS = 400;
+
+/** Combines the schedule step's date + 2-hour-window picks into the ISO
+ * datetime the backend's `scheduledFor` field expects. */
+function toScheduledForIso(date: string, window: string): string | undefined {
+  if (!date) return undefined;
+  const start = window.split(/[–-]/)[0]?.trim();
+  return `${date}T${start || "09:00"}:00`;
+}
 
 const STEP_DEFS: { label: string; icon: IconName }[] = [
   { label: "Pickup", icon: "pin" },
@@ -116,38 +128,43 @@ function StepBar({ step, onGo }: { step: number; onGo: (i: number) => void }) {
 function PriceSidebar({
   quote,
   loading,
+  error,
   pickupAddress,
   destinationAddress,
-  distanceKm,
 }: {
   quote: QuoteResponse | null;
   loading: boolean;
+  error: string | null;
   pickupAddress: string;
   destinationAddress: string;
-  distanceKm: number;
 }) {
-  const pickupLabel = distanceProvider.resolveLabel(pickupAddress) ?? pickupAddress;
-  const destinationLabel = distanceProvider.resolveLabel(destinationAddress) ?? destinationAddress;
   return (
     <aside className="p-6 rounded-xl border border-divider bg-card sticky top-6 flex flex-col gap-3.5">
       <div className="text-xl font-semibold">Price estimate</div>
       <div className="flex flex-col gap-0.5 text-sm py-3 border-t border-b border-divider">
         <div className="flex gap-2.5 items-center">
           <Icon name="pin" size={14} className="text-accent" />
-          <span className="truncate">{pickupLabel}</span>
+          <span className="truncate">{pickupAddress || "Pickup address"}</span>
         </div>
         <div className="w-px h-3.5 bg-divider ml-[6px]" />
         <div className="flex gap-2.5 items-center">
           <Icon name="pin" size={14} className="text-accent-800" />
-          <span className="truncate">{destinationLabel} · {distanceKm} km</span>
+          <span className="truncate">
+            {destinationAddress || "Destination address"}
+            {quote ? ` · ${quote.distanceKm.toFixed(1)} km` : ""}
+          </span>
         </div>
       </div>
-      {quote?.breakdown.map((l) => (
-        <div key={l.label} className="flex justify-between text-sm">
-          <span className="text-neutral-700">{l.label}</span>
-          <span>{fmtUsd(l.amount)}</span>
-        </div>
-      ))}
+      {error ? (
+        <p className="text-sm text-error m-0">{error}</p>
+      ) : (
+        quote?.breakdown.map((l) => (
+          <div key={l.label} className="flex justify-between text-sm">
+            <span className="text-neutral-700">{l.label}</span>
+            <span>{fmtUsd(l.amount)}</span>
+          </div>
+        ))
+      )}
       <div className="flex justify-between items-end pt-3 border-t border-divider">
         <span className="text-sm">Total</span>
         <span className="text-[40px] font-semibold leading-none">
@@ -167,6 +184,7 @@ export default function LogisticsBookPage() {
   const [form, setForm] = React.useState<FormState>(INITIAL_STATE);
   const [quote, setQuote] = React.useState<QuoteResponse | null>(null);
   const [quoteLoading, setQuoteLoading] = React.useState(false);
+  const [quoteError, setQuoteError] = React.useState<string | null>(null);
   const [booking, setBooking] = React.useState(false);
   const [bookError, setBookError] = React.useState<string | null>(null);
   const [booked, setBooked] = React.useState<Delivery | null>(null);
@@ -176,36 +194,44 @@ export default function LogisticsBookPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  const distanceKm = React.useMemo(
-    () => distanceProvider.estimateKm(form.pickupAddress, form.destinationAddress),
-    [form.pickupAddress, form.destinationAddress],
-  );
-
   React.useEffect(() => {
+    if (!form.pickupAddress.trim() || !form.destinationAddress.trim()) return;
     let cancelled = false;
     // Re-quoting from the server whenever speed/weight/insurance/addresses
     // change and flagging it as in-flight is a genuine
     // sync-with-external-system effect, not derivable render-time state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setQuoteLoading(true);
-    quoteDelivery({
-      speed: form.speed,
-      distanceKm,
-      weightBand: form.weightBand,
-      insured: form.insured,
-    })
-      .then((q) => !cancelled && setQuote(q))
-      .catch(() => {})
-      .finally(() => !cancelled && setQuoteLoading(false));
+    // Debounced since this now hits the real Mapbox-backed geocoding seam.
+    const timer = setTimeout(() => {
+      setQuoteLoading(true);
+      setQuoteError(null);
+      quoteDelivery({
+        pickupAddress: form.pickupAddress,
+        destinationAddress: form.destinationAddress,
+        speed: form.speed,
+        weightBand: form.weightBand,
+        insured: form.insured,
+      })
+        .then((q) => !cancelled && setQuote(q))
+        .catch((err) => {
+          if (cancelled) return;
+          setQuote(null);
+          setQuoteError(
+            err instanceof ApiError ? err.message : "Couldn't price this route. Check both addresses.",
+          );
+        })
+        .finally(() => !cancelled && setQuoteLoading(false));
+    }, QUOTE_DEBOUNCE_MS);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [form.speed, form.weightBand, form.insured, distanceKm]);
+  }, [form.pickupAddress, form.destinationAddress, form.speed, form.weightBand, form.insured]);
 
   const canContinue = (() => {
     if (step === 0) return form.pickupAddress && form.pickupContact && form.pickupPhone;
     if (step === 1) return form.destinationAddress && form.destinationContact && form.destinationPhone;
     if (step === 3) return form.speed !== "SCHEDULED" || !!form.scheduleDate;
+    if (step === 4) return !!quote && !quoteError;
     return true;
   })();
 
@@ -218,19 +244,20 @@ export default function LogisticsBookPage() {
     setBookError(null);
     try {
       const delivery = await createDelivery({
+        pickupAddress: form.pickupAddress,
+        destinationAddress: form.destinationAddress,
         speed: form.speed,
-        distanceKm,
         weightBand: form.weightBand,
         insured: form.insured,
-        pickupAddress: form.pickupAddress,
         pickupContact: form.pickupContact,
         pickupPhone: form.pickupPhone,
-        destinationAddress: form.destinationAddress,
         destinationContact: form.destinationContact,
         destinationPhone: form.destinationPhone,
         packageDescription: form.packageDescription || PACKAGE_TYPES[form.packageTypeIdx].label,
         fragile: PACKAGE_TYPES[form.packageTypeIdx].fragile,
         notes: form.pickupNotes || undefined,
+        scheduledFor:
+          form.speed === "SCHEDULED" ? toScheduledForIso(form.scheduleDate, form.scheduleWindow) : undefined,
       });
       setBooked(delivery);
       window.scrollTo(0, 0);
@@ -308,7 +335,10 @@ export default function LogisticsBookPage() {
             {step === 0 && (
               <>
                 <Field label="Pickup address" required>
-                  <Input value={form.pickupAddress} onChange={(e) => set("pickupAddress", e.target.value)} />
+                  <AddressAutocomplete
+                    value={form.pickupAddress}
+                    onChange={(v) => set("pickupAddress", v)}
+                  />
                 </Field>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <Field label="Contact person" required>
@@ -331,9 +361,9 @@ export default function LogisticsBookPage() {
             {step === 1 && (
               <>
                 <Field label="Delivery address" required>
-                  <Input
+                  <AddressAutocomplete
                     value={form.destinationAddress}
-                    onChange={(e) => set("destinationAddress", e.target.value)}
+                    onChange={(v) => set("destinationAddress", v)}
                   />
                 </Field>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -555,9 +585,9 @@ export default function LogisticsBookPage() {
           <PriceSidebar
             quote={quote}
             loading={quoteLoading}
+            error={quoteError}
             pickupAddress={form.pickupAddress}
             destinationAddress={form.destinationAddress}
-            distanceKm={distanceKm}
           />
         </div>
       </main>

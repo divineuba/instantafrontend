@@ -47,101 +47,31 @@ export function fmtUsd(n: number) {
   return `$${n.toFixed(2)}`;
 }
 
-export interface GeoPoint {
-  lat: number;
-  lng: number;
-}
-
-interface KnownPlace {
+export interface AddressSuggestion {
+  id: string;
   label: string;
-  match: string[];
-  point: GeoPoint;
+  fullAddress: string;
 }
 
 /**
- * Fixed coordinates for neighbourhoods/cities already seeded as
- * `DeliveryZone`s (see backend `admin.service.ts`). This is the lookup table
- * a real geocoding provider would replace — see INTEGRATIONS.md.
+ * Thin wrapper around Mapbox's Geocoding API for address-field autocomplete,
+ * called directly from the browser with the public, domain-restricted
+ * `NEXT_PUBLIC_MAPBOX_TOKEN` (see INTEGRATIONS.md). This is a UI convenience
+ * only — the backend re-geocodes whichever address string the user submits
+ * itself (`GeocodingProvider`), rather than trusting any client-supplied
+ * coordinates, so an empty token here just means no autocomplete dropdown,
+ * not a broken quote/booking flow.
  */
-const KNOWN_AREAS: KnownPlace[] = [
-  { label: "Lekki, Lagos", match: ["lekki"], point: { lat: 6.4698, lng: 3.5852 } },
-  { label: "Ikoyi, Lagos", match: ["ikoyi"], point: { lat: 6.4541, lng: 3.4316 } },
-  { label: "Ajah, Lagos", match: ["ajah"], point: { lat: 6.4642, lng: 3.5949 } },
-  { label: "Victoria Island, Lagos", match: ["victoria island"], point: { lat: 6.4281, lng: 3.4219 } },
-  { label: "Ikeja, Lagos", match: ["ikeja"], point: { lat: 6.6018, lng: 3.3515 } },
-  { label: "Yaba, Lagos", match: ["yaba"], point: { lat: 6.5096, lng: 3.3711 } },
-  { label: "Surulere, Lagos", match: ["surulere"], point: { lat: 6.5059, lng: 3.354 } },
-  { label: "Garki, Abuja", match: ["garki"], point: { lat: 9.0333, lng: 7.4833 } },
-  { label: "Wuse, Abuja", match: ["wuse"], point: { lat: 9.0765, lng: 7.4842 } },
-  { label: "Maitama, Abuja", match: ["maitama"], point: { lat: 9.0931, lng: 7.4898 } },
-  { label: "Trans-Amadi, Port Harcourt", match: ["trans-amadi", "trans amadi"], point: { lat: 4.7772, lng: 7.0398 } },
-  { label: "GRA, Port Harcourt", match: ["port harcourt gra", "ph gra"], point: { lat: 4.8156, lng: 7.0317 } },
-  { label: "Osu, Accra", match: ["osu"], point: { lat: 5.5563, lng: -0.1738 } },
-  { label: "East Legon, Accra", match: ["east legon"], point: { lat: 5.65, lng: -0.15 } },
-  { label: "Airport, Accra", match: ["kotoka", "accra airport"], point: { lat: 5.6052, lng: -0.1719 } },
-];
+export async function suggestAddresses(query: string, signal?: AbortSignal): Promise<AddressSuggestion[]> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token || query.trim().length < 3) return [];
 
-const KNOWN_CITIES: KnownPlace[] = [
-  { label: "Lagos", match: ["lagos"], point: { lat: 6.5244, lng: 3.3792 } },
-  { label: "Abuja", match: ["abuja"], point: { lat: 9.0765, lng: 7.3986 } },
-  { label: "Port Harcourt", match: ["port harcourt"], point: { lat: 4.8156, lng: 7.0498 } },
-  { label: "Accra", match: ["accra"], point: { lat: 5.6037, lng: -0.187 } },
-];
-
-/** Used only when neither address resolves to a known place. */
-const FALLBACK_DISTANCE_KM = 8.4;
-
-function toRad(deg: number) {
-  return (deg * Math.PI) / 180;
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&autocomplete=true&limit=5`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { features?: { id: string; place_name: string; text: string }[] };
+  return (data.features ?? []).map((f) => ({ id: f.id, label: f.text, fullAddress: f.place_name }));
 }
-
-function haversineKm(a: GeoPoint, b: GeoPoint): number {
-  const R = 6371;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const sinLat = Math.sin(dLat / 2);
-  const sinLng = Math.sin(dLng / 2);
-  const h = sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
-  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-}
-
-function findKnownPlace(address: string): KnownPlace | null {
-  const text = address.toLowerCase();
-  for (const place of [...KNOWN_AREAS, ...KNOWN_CITIES]) {
-    if (place.match.some((m) => text.includes(m))) return place;
-  }
-  return null;
-}
-
-/**
- * Stands in for a real geocoding/distance-matrix provider (documented in
- * INTEGRATIONS.md). Resolves free-text addresses against a fixed table of
- * known neighbourhoods/cities and estimates straight-line distance with the
- * haversine formula. Swapping in a real provider later is a one-file change:
- * keep this interface, replace `distanceProvider`'s implementation.
- */
-export interface DistanceProvider {
-  /** Best-effort label for the resolved area, for display purposes. */
-  resolveLabel(address: string): string | null;
-  /** Estimated distance in km between two free-text addresses. */
-  estimateKm(pickupAddress: string, destinationAddress: string): number;
-}
-
-class HeuristicZoneDistanceProvider implements DistanceProvider {
-  resolveLabel(address: string): string | null {
-    return findKnownPlace(address)?.label ?? null;
-  }
-
-  estimateKm(pickupAddress: string, destinationAddress: string): number {
-    const from = findKnownPlace(pickupAddress);
-    const to = findKnownPlace(destinationAddress);
-    if (!from || !to) return FALLBACK_DISTANCE_KM;
-    if (from.label === to.label) return 1.5;
-    return Math.max(1, Math.round(haversineKm(from.point, to.point) * 10) / 10);
-  }
-}
-
-export const distanceProvider: DistanceProvider = new HeuristicZoneDistanceProvider();
 
 export interface ServiceHowStep {
   n: number;
@@ -293,8 +223,9 @@ export const LOGISTICS_SERVICES: Record<string, LogisticsService> = {
 };
 
 export interface QuoteRequest {
+  pickupAddress: string;
+  destinationAddress: string;
   speed: DeliverySpeedKey;
-  distanceKm: number;
   weightBand: WeightBandKey;
   insured?: boolean;
 }
@@ -311,18 +242,22 @@ export interface QuoteResponse {
   insuranceFee: number;
   total: number;
   breakdown: PriceBreakdownItem[];
+  /** Real road-route figures from the backend's Mapbox geocoding seam. */
+  distanceKm: number;
+  durationMin: number;
 }
 
 export interface CreateDeliveryRequest extends QuoteRequest {
-  pickupAddress: string;
   pickupContact: string;
   pickupPhone: string;
-  destinationAddress: string;
   destinationContact: string;
   destinationPhone: string;
   packageDescription: string;
   fragile?: boolean;
   notes?: string;
+  /** Required when `speed` is SCHEDULED; the booked pickup window's start time. */
+  scheduledFor?: string;
+  workspaceId?: string;
 }
 
 export interface DeliveryPackage {
@@ -338,18 +273,27 @@ export interface Delivery {
   pickupAddress: string;
   pickupContact: string;
   pickupPhone: string;
+  pickupLat: string | null;
+  pickupLng: string | null;
   destinationAddress: string;
   destinationContact: string;
   destinationPhone: string;
+  destLat: string | null;
+  destLng: string | null;
+  /** GeoJSON [lng, lat] coordinate pairs for the real road route; null for
+   * pre-Phase-14.0 deliveries or if geocoding never ran. */
+  routePolyline: [number, number][] | null;
   speed: DeliverySpeedKey;
   distanceKm: string;
   insured: boolean;
+  scheduledFor: string | null;
   speedPrice: string;
   distanceSurcharge: string;
   weightSurcharge: string;
   insuranceFee: string;
   total: string;
   status: DeliveryStatusKey;
+  riderId: string | null;
   riderName: string | null;
   riderPhone: string | null;
   eta: string | null;
@@ -357,6 +301,16 @@ export interface Delivery {
   createdAt: string;
   updatedAt: string;
   trackState: "picked" | "transit" | "out" | "delivered" | "notfound";
+}
+
+export interface DeliveryMessage {
+  id: string;
+  deliveryId: string;
+  sender: "CUSTOMER" | "SUPPORT";
+  senderName: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export function quoteDelivery(req: QuoteRequest) {
@@ -375,6 +329,17 @@ export function createDelivery(req: CreateDeliveryRequest) {
 
 export function trackDelivery(trackingId: string) {
   return apiFetch<Delivery>(`/deliveries/${encodeURIComponent(trackingId)}`);
+}
+
+export function listDeliveryMessages(trackingId: string) {
+  return apiFetch<DeliveryMessage[]>(`/deliveries/${encodeURIComponent(trackingId)}/messages`);
+}
+
+export function sendDeliveryMessage(trackingId: string, body: string) {
+  return apiFetch<DeliveryMessage>(`/deliveries/${encodeURIComponent(trackingId)}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
 }
 
 export const LOGISTICS_FAQS = [

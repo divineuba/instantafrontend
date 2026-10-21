@@ -14,7 +14,6 @@ import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/table";
 import {
   SPEEDS,
   LOGISTICS_SERVICES,
-  distanceProvider,
   fmtUsd,
   quoteDelivery,
   type WeightBandKey,
@@ -38,34 +37,36 @@ function QuickQuote() {
   const [dropoff, setDropoff] = React.useState("24 Awolowo Rd, Ikoyi, Lagos");
   const [size, setSize] = React.useState<WeightBandKey>("UP_TO_5KG");
   const [total, setTotal] = React.useState(6.5);
+  const [distanceKm, setDistanceKm] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(false);
-
-  const distanceKm = React.useMemo(
-    () => distanceProvider.estimateKm(pickup, dropoff),
-    [pickup, dropoff],
-  );
 
   React.useEffect(() => {
     let cancelled = false;
     // Kicking off a server fetch when `size`/addresses change and flagging it
     // as in-flight is a genuine sync-with-external-system effect, not
-    // derivable render-time state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    quoteDelivery({ speed: "STANDARD", distanceKm, weightBand: size })
-      .then((q) => {
-        if (!cancelled) setTotal(q.total);
-      })
-      .catch(() => {
-        /* fall back to the last known total if the API is unreachable */
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    // derivable render-time state. Debounced since this now hits the real
+    // Mapbox-backed geocoding seam on the backend.
+    const timer = setTimeout(() => {
+      setLoading(true);
+      quoteDelivery({ pickupAddress: pickup, destinationAddress: dropoff, speed: "STANDARD", weightBand: size })
+        .then((q) => {
+          if (!cancelled) {
+            setTotal(q.total);
+            setDistanceKm(q.distanceKm);
+          }
+        })
+        .catch(() => {
+          /* fall back to the last known total if the API is unreachable */
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 400);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [size, distanceKm]);
+  }, [size, pickup, dropoff]);
 
   return (
     <div className="p-6 flex flex-col gap-3.5 bg-card border border-divider rounded-xl shadow-md">
@@ -96,7 +97,7 @@ function QuickQuote() {
           </div>
         </div>
         <div className="text-[13px] text-neutral-700 text-right">
-          {distanceKm} km · Standard
+          {distanceKm != null ? `${distanceKm.toFixed(1)} km · Standard` : "Standard"}
           <br />
           Arrives today by 18:00
         </div>

@@ -2,14 +2,26 @@
 
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import MapGL, { Marker, Source, Layer, NavigationControl, type MapRef } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { trackDelivery, type Delivery, SPEEDS, WEIGHT_BANDS } from "@/lib/logistics";
+import {
+  trackDelivery,
+  listDeliveryMessages,
+  type Delivery,
+  type DeliveryMessage,
+  type DeliveryStatusKey,
+  SPEEDS,
+  WEIGHT_BANDS,
+} from "@/lib/logistics";
+import { connectTrackingSocket, type DeliveryUpdateEvent, type ChatNewEvent } from "@/lib/logistics-socket";
 import { ApiError } from "@/lib/api";
-import { TruckGlyph } from "@/components/illustrations/scene";
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: string; icon: IconName }[] = [
   { key: "picked", label: "Picked up", icon: "package" },
@@ -20,19 +32,23 @@ const STAGE_DEFS: { key: "picked" | "transit" | "out" | "delivered"; label: stri
 
 const STAGE_ORDER = ["picked", "transit", "out", "delivered"] as const;
 
-/** Fixed waypoints (in the map panel's 800x560 viewBox) tracing pickup to
- * drop-off. The truck marker and the solid/dashed route split are both
- * derived from this by walking `progress` (0 = just picked up, 1 = delivered)
- * along the polyline, rather than a hardcoded midpoint. */
-const ROUTE_POINTS: [number, number][] = [
-  [120, 470],
-  [290, 350],
-  [470, 330],
-  [590, 300],
-  [610, 190],
-  [690, 110],
-];
+/** Mirrors the backend's status→trackState mapping so a socket-pushed status
+ * (which only carries the raw enum) can be folded into the UI's stage model
+ * without a full refetch. */
+const STATUS_TO_TRACK_STATE: Record<DeliveryStatusKey, Delivery["trackState"]> = {
+  PENDING: "picked",
+  PICKED_UP: "picked",
+  IN_TRANSIT: "transit",
+  OUT_FOR_DELIVERY: "out",
+  DELIVERED: "delivered",
+  CANCELLED: "notfound",
+};
 
+/** Walks a real route polyline (GeoJSON [lng, lat] pairs) by `progress`
+ * (0 = just picked up, 1 = delivered) to place the rider marker. The route
+ * itself is real road geometry from the backend's Mapbox seam — only the
+ * position *along* it is simulated from delivery status, which is why the
+ * UI calls this "estimated position," never "live GPS". */
 function pointAtProgress(points: [number, number][], t: number) {
   const clamped = Math.min(Math.max(t, 0), 1);
   const segLens = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
@@ -52,10 +68,6 @@ function pointAtProgress(points: [number, number][], t: number) {
   return { x, y, segmentIndex: points.length - 2 };
 }
 
-function routePath(points: [number, number][]) {
-  return points.map((p, i) => `${i === 0 ? "M" : "L"}${p[0]} ${p[1]}`).join(" ");
-}
-
 function formatTime(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -66,21 +78,214 @@ function formatDistanceLabel(weightBand?: string) {
   return band?.label ?? "Up to 5 kg";
 }
 
-function TrackResult({ delivery }: { delivery: Delivery }) {
+function RouteMap({ delivery }: { delivery: Delivery }) {
+  const mapRef = React.useRef<MapRef>(null);
+  const polyline = delivery.routePolyline;
   const idx = STAGE_ORDER.indexOf(delivery.trackState as (typeof STAGE_ORDER)[number]);
-  const speed = SPEEDS.find((s) => s.key === delivery.speed);
-
   const delivered = delivery.trackState === "delivered";
   const progress = delivered ? 1 : Math.max(idx, 0) / (STAGE_ORDER.length - 1);
-  const current = pointAtProgress(ROUTE_POINTS, progress);
-  const donePoints: [number, number][] = [
-    ...ROUTE_POINTS.slice(0, current.segmentIndex + 1),
-    [current.x, current.y],
-  ];
-  const remainingPoints: [number, number][] = [
-    [current.x, current.y],
-    ...ROUTE_POINTS.slice(current.segmentIndex + 1),
-  ];
+
+  const current = polyline && polyline.length > 1 ? pointAtProgress(polyline, progress) : null;
+  const donePoints: [number, number][] =
+    polyline && current ? [...polyline.slice(0, current.segmentIndex + 1), [current.x, current.y]] : [];
+  const remainingPoints: [number, number][] =
+    polyline && current ? [[current.x, current.y], ...polyline.slice(current.segmentIndex + 1)] : [];
+
+  const bounds = React.useMemo(() => {
+    if (!polyline || polyline.length === 0) return null;
+    const lngs = polyline.map((p) => p[0]);
+    const lats = polyline.map((p) => p[1]);
+    return [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)],
+    ] as [[number, number], [number, number]];
+  }, [polyline]);
+
+  if (!MAPBOX_TOKEN || !polyline || polyline.length < 2) {
+    return (
+      <div className="relative rounded-xl border border-divider overflow-hidden h-[420px] sm:h-[520px] flex flex-col items-center justify-center gap-2 text-center p-8 bg-neutral-100">
+        <Icon name="pin" size={28} className="text-neutral-500" />
+        <p className="text-sm text-neutral-700 m-0 max-w-sm">
+          {MAPBOX_TOKEN
+            ? "No route map yet for this delivery."
+            : "Map unavailable — NEXT_PUBLIC_MAPBOX_TOKEN isn't configured."}
+        </p>
+      </div>
+    );
+  }
+
+  const pickup = polyline[0];
+  const destination = polyline[polyline.length - 1];
+
+  return (
+    <div className="relative rounded-xl border border-divider overflow-hidden h-[420px] sm:h-[520px]">
+      <MapGL
+        ref={mapRef}
+        mapboxAccessToken={MAPBOX_TOKEN}
+        initialViewState={{
+          longitude: (pickup[0] + destination[0]) / 2,
+          latitude: (pickup[1] + destination[1]) / 2,
+          zoom: 12,
+        }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        style={{ width: "100%", height: "100%" }}
+        onLoad={() => {
+          if (bounds) mapRef.current?.fitBounds(bounds, { padding: 60, duration: 0 });
+        }}
+      >
+        <NavigationControl position="top-right" />
+        {donePoints.length > 1 && (
+          <Source
+            id="route-done"
+            type="geojson"
+            data={{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: donePoints } }}
+          >
+            <Layer id="route-done-line" type="line" paint={{ "line-color": "#2f6fed", "line-width": 4 }} />
+          </Source>
+        )}
+        {remainingPoints.length > 1 && (
+          <Source
+            id="route-remaining"
+            type="geojson"
+            data={{
+              type: "Feature",
+              properties: {},
+              geometry: { type: "LineString", coordinates: remainingPoints },
+            }}
+          >
+            <Layer
+              id="route-remaining-line"
+              type="line"
+              paint={{ "line-color": "#2f6fed", "line-width": 3, "line-dasharray": [2, 2] }}
+            />
+          </Source>
+        )}
+        <Marker longitude={pickup[0]} latitude={pickup[1]} anchor="bottom">
+          <div className="size-[18px] rounded-full border-2 border-accent-800 bg-white" />
+        </Marker>
+        <Marker longitude={destination[0]} latitude={destination[1]} anchor="bottom">
+          <div
+            className={`size-5 text-white rounded-[10px] flex items-center justify-center ${
+              delivered ? "bg-[#28a745]" : "bg-accent-800"
+            }`}
+          >
+            <Icon name={delivered ? "check" : "pin"} size={12} />
+          </div>
+        </Marker>
+        {!delivered && current && (
+          <Marker longitude={current.x} latitude={current.y} anchor="center">
+            <div className="size-6 rounded-full bg-accent flex items-center justify-center text-white shadow-md">
+              <Icon name="truck" size={14} />
+            </div>
+          </Marker>
+        )}
+      </MapGL>
+      <div className="absolute left-5 top-5 bg-[var(--color-bg)] border border-divider px-3.5 py-2.5 flex gap-2.5 items-center text-[13px] rounded-xl">
+        <span className={`size-2 rounded-full ${delivered ? "bg-neutral-400" : "bg-[#28a745]"}`} />
+        {delivered ? "Delivered" : "Estimated position · updates as status changes"}
+      </div>
+    </div>
+  );
+}
+
+function ChatPanel({
+  messages,
+  live,
+  phoneInput,
+  onPhoneInputChange,
+  onUnlock,
+  chatInput,
+  onChatInputChange,
+  onSend,
+}: {
+  messages: DeliveryMessage[];
+  live: boolean;
+  phoneInput: string;
+  onPhoneInputChange: (v: string) => void;
+  onUnlock: () => void;
+  chatInput: string;
+  onChatInputChange: (v: string) => void;
+  onSend: () => void;
+}) {
+  return (
+    <div className="p-5 rounded-xl border border-divider bg-card flex flex-col gap-3">
+      <div className="text-xl font-semibold">Support chat</div>
+      {!live && (
+        <div className="flex flex-col gap-2 p-3 rounded-lg bg-accent-100/40 text-[13px]">
+          <span>Enter the phone number used to book this delivery to unlock live chat and updates.</span>
+          <div className="flex gap-2">
+            <Input
+              value={phoneInput}
+              onChange={(e) => onPhoneInputChange(e.target.value)}
+              placeholder="Phone number"
+              className="h-9"
+            />
+            <Button variant="secondary" className="h-9 shrink-0" onClick={onUnlock}>
+              Unlock
+            </Button>
+          </div>
+        </div>
+      )}
+      <div className="flex flex-col gap-2 max-h-64 overflow-auto">
+        {messages.length === 0 && <p className="text-sm text-neutral-600 m-0">No messages yet.</p>}
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`max-w-[85%] px-3 py-2 rounded-lg text-sm ${
+              m.sender === "CUSTOMER" ? "self-end bg-accent text-white" : "self-start bg-neutral-100"
+            }`}
+          >
+            <div className="text-[11px] opacity-70 mb-0.5">{m.senderName}</div>
+            {m.body}
+          </div>
+        ))}
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSend();
+        }}
+        className="flex gap-2"
+      >
+        <Input
+          value={chatInput}
+          onChange={(e) => onChatInputChange(e.target.value)}
+          placeholder={live ? "Message support…" : "Unlock chat above to send a message"}
+          disabled={!live}
+          className="h-9"
+        />
+        <Button type="submit" className="h-9 shrink-0" disabled={!live || !chatInput.trim()}>
+          Send
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function TrackResult({
+  delivery,
+  live,
+  messages,
+  phoneInput,
+  onPhoneInputChange,
+  onUnlock,
+  chatInput,
+  onChatInputChange,
+  onSendChat,
+}: {
+  delivery: Delivery;
+  live: boolean;
+  messages: DeliveryMessage[];
+  phoneInput: string;
+  onPhoneInputChange: (v: string) => void;
+  onUnlock: () => void;
+  chatInput: string;
+  onChatInputChange: (v: string) => void;
+  onSendChat: () => void;
+}) {
+  const idx = STAGE_ORDER.indexOf(delivery.trackState as (typeof STAGE_ORDER)[number]);
+  const speed = SPEEDS.find((s) => s.key === delivery.speed);
+  const chatRef = React.useRef<HTMLDivElement>(null);
 
   const timeline = [
     delivery.trackState === "delivered" && {
@@ -140,11 +345,7 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
                 >
                   <Icon name={s.icon} size={14} />
                 </span>
-                <span
-                  className={`text-xl font-semibold ${
-                    i <= idx ? "text-text" : "text-neutral-500"
-                  }`}
-                >
+                <span className={`text-xl font-semibold ${i <= idx ? "text-text" : "text-neutral-500"}`}>
                   {s.label}
                 </span>
               </div>
@@ -155,64 +356,14 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
                     ? formatTime(delivery.eta)
                     : "—"}
               </span>
-              <span
-                className={`h-[3px] ${done ? "bg-accent" : "bg-neutral-300"}`}
-              />
+              <span className={`h-[3px] ${done ? "bg-accent" : "bg-neutral-300"}`} />
             </div>
           );
         })}
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
-        <div
-          className="relative rounded-xl border border-divider overflow-hidden h-[420px] sm:h-[520px]"
-          style={{
-            backgroundImage:
-              "linear-gradient(var(--color-divider) 1px, transparent 1px), linear-gradient(90deg, var(--color-divider) 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
-          }}
-        >
-          <svg viewBox="0 0 800 560" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-            <path d="M0 380 L800 300" stroke="var(--color-neutral-300)" strokeWidth={18} fill="none" />
-            <path d="M260 0 L320 560" stroke="var(--color-neutral-300)" strokeWidth={12} fill="none" />
-            <path d="M560 0 L620 560" stroke="var(--color-neutral-300)" strokeWidth={10} fill="none" />
-            <path d="M0 140 Q400 200 800 120" stroke="var(--color-neutral-300)" strokeWidth={8} fill="none" />
-            <path d={routePath(donePoints)} stroke="var(--color-accent)" strokeWidth={4} fill="none" />
-            {remainingPoints.length > 1 && (
-              <path
-                d={routePath(remainingPoints)}
-                stroke="var(--color-accent)"
-                strokeWidth={3}
-                strokeDasharray="8 7"
-                fill="none"
-              />
-            )}
-            {!delivered && (
-              <g style={{ transition: "transform 500ms ease" }}>
-                <circle cx={current.x} cy={current.y} r={26} fill="var(--color-accent)" opacity={0.22} />
-                <TruckGlyph x={current.x - 22 * 1.3} y={current.y - 13 * 1.3} scale={1.3} color="var(--color-accent-900)" />
-              </g>
-            )}
-          </svg>
-          <div className="absolute left-[15%] top-[84%] -translate-x-1/2 -translate-y-1/2 size-[18px] border-2 border-accent-800 bg-[var(--color-bg)]" />
-          <div className="absolute left-[calc(15%+14px)] top-[calc(84%-10px)] text-xs bg-[var(--color-bg)] px-1.5 py-0.5 border border-divider rounded-xl">
-            Pickup
-          </div>
-          <div
-            className={`absolute left-[86%] top-[20%] -translate-x-1/2 -translate-y-1/2 size-5 text-white rounded-[10px] flex items-center justify-center ${
-              delivered ? "bg-[#28a745]" : "bg-accent-800"
-            }`}
-          >
-            <Icon name={delivered ? "check" : "pin"} size={12} />
-          </div>
-          <div className="absolute left-[calc(86%-140px)] top-[calc(20%-36px)] text-xs bg-[var(--color-bg)] px-1.5 py-0.5 border border-divider rounded-xl">
-            Drop-off
-          </div>
-          <div className="absolute left-5 top-5 bg-[var(--color-bg)] border border-divider px-3.5 py-2.5 flex gap-2.5 items-center text-[13px] rounded-xl">
-            <span className={`size-2 rounded-full ${delivered ? "bg-neutral-400" : "bg-[#28a745]"}`} />
-            {delivered ? "Delivered" : "Live · updated moments ago"}
-          </div>
-        </div>
+        <RouteMap delivery={delivery} />
 
         <div className="flex flex-col gap-5">
           <div className="p-5 rounded-xl border border-divider bg-card flex flex-col gap-1">
@@ -222,9 +373,7 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
             <span className="text-[48px] sm:text-[64px] font-semibold leading-none text-accent-700">
               {formatTime(delivery.eta)}
             </span>
-            <span className="text-sm text-neutral-700">
-              {delivery.destinationAddress}
-            </span>
+            <span className="text-sm text-neutral-700">{delivery.destinationAddress}</span>
           </div>
 
           <div className="p-5 rounded-xl border border-divider bg-card flex gap-3.5 items-center">
@@ -237,14 +386,17 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
             </span>
             <div className="mr-auto">
               <div className="text-xl font-semibold">{delivery.riderName}</div>
-              <div className="text-[13px] text-neutral-700">
-                Motorbike · {delivery.riderPhone}
-              </div>
+              <div className="text-[13px] text-neutral-700">Motorbike · {delivery.riderPhone}</div>
             </div>
             <Button variant="secondary" size="icon" aria-label="Call rider">
               <Icon name="phone" size={16} />
             </Button>
-            <Button variant="secondary" size="icon" aria-label="Message rider">
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label="Message rider"
+              onClick={() => chatRef.current?.scrollIntoView({ behavior: "smooth" })}
+            >
               <Icon name="chat" size={16} />
             </Button>
           </div>
@@ -257,13 +409,9 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
                   <span className="text-neutral-600">{t.time}</span>
                   <span className="flex flex-col items-center">
                     <span
-                      className={`size-[9px] mt-1 border border-accent ${
-                        i === 0 ? "bg-accent" : "bg-transparent"
-                      }`}
+                      className={`size-[9px] mt-1 border border-accent ${i === 0 ? "bg-accent" : "bg-transparent"}`}
                     />
-                    {i < timeline.length - 1 && (
-                      <span className="flex-1 w-px bg-divider min-h-[22px]" />
-                    )}
+                    {i < timeline.length - 1 && <span className="flex-1 w-px bg-divider min-h-[22px]" />}
                   </span>
                   <div className="pb-3">
                     <div className="font-medium">{t.title}</div>
@@ -274,10 +422,25 @@ function TrackResult({ delivery }: { delivery: Delivery }) {
             </div>
           </div>
 
+          <div ref={chatRef}>
+            <ChatPanel
+              messages={messages}
+              live={live}
+              phoneInput={phoneInput}
+              onPhoneInputChange={onPhoneInputChange}
+              onUnlock={onUnlock}
+              chatInput={chatInput}
+              onChatInputChange={onChatInputChange}
+              onSend={onSendChat}
+            />
+          </div>
+
           <div className="p-5 rounded-xl border border-divider bg-card grid grid-cols-2 gap-3 text-[13px]">
             <div>
               <div className="text-neutral-600">Package</div>
-              <div>{delivery.package?.description} · {formatDistanceLabel(delivery.package?.weightBand)}</div>
+              <div>
+                {delivery.package?.description} · {formatDistanceLabel(delivery.package?.weightBand)}
+              </div>
             </div>
             <div>
               <div className="text-neutral-600">Option</div>
@@ -365,6 +528,13 @@ function TrackPageInner() {
   const [searchedId, setSearchedId] = React.useState<string | null>(null);
   const [error, setError] = React.useState(false);
 
+  const [phone, setPhone] = React.useState("");
+  const [phoneInput, setPhoneInput] = React.useState("");
+  const [live, setLive] = React.useState(false);
+  const [messages, setMessages] = React.useState<DeliveryMessage[]>([]);
+  const [chatInput, setChatInput] = React.useState("");
+  const socketRef = React.useRef<ReturnType<typeof connectTrackingSocket> | null>(null);
+
   const lookup = React.useCallback(async (id: string) => {
     if (!id.trim()) return;
     setLoading(true);
@@ -390,10 +560,54 @@ function TrackPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  React.useEffect(() => {
+    if (!delivery) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMessages([]);
+      return;
+    }
+    listDeliveryMessages(delivery.trackingId)
+      .then(setMessages)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delivery?.trackingId]);
+
+  React.useEffect(() => {
+    if (!delivery) return;
+    const trackingId = delivery.trackingId;
+    const socket = connectTrackingSocket(trackingId, phone || undefined);
+    socketRef.current = socket;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLive(false);
+    socket.on("connect", () => setLive(true));
+    socket.on("connect_error", () => setLive(false));
+    socket.on("disconnect", () => setLive(false));
+    socket.on("delivery:update", (evt: DeliveryUpdateEvent) => {
+      if (evt.trackingId !== trackingId) return;
+      setDelivery((d) => (d ? { ...d, status: evt.status, trackState: STATUS_TO_TRACK_STATE[evt.status] } : d));
+    });
+    socket.on("chat:new", (evt: ChatNewEvent) => {
+      if (evt.trackingId !== trackingId) return;
+      setMessages((m) => [...m, evt.message]);
+    });
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delivery?.trackingId, phone]);
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     router.replace(`/logistics/track?id=${encodeURIComponent(inputId)}`);
     lookup(inputId);
+  }
+
+  function sendChat() {
+    const body = chatInput.trim();
+    if (!body || !socketRef.current || !delivery) return;
+    socketRef.current.emit("chat:send", { trackingId: delivery.trackingId, body });
+    setChatInput("");
   }
 
   const headline = delivery
@@ -430,7 +644,19 @@ function TrackPageInner() {
         </Button>
       </form>
 
-      {searchedId && !loading && delivery && <TrackResult delivery={delivery} />}
+      {searchedId && !loading && delivery && (
+        <TrackResult
+          delivery={delivery}
+          live={live}
+          messages={messages}
+          phoneInput={phoneInput}
+          onPhoneInputChange={setPhoneInput}
+          onUnlock={() => setPhone(phoneInput.trim())}
+          chatInput={chatInput}
+          onChatInputChange={setChatInput}
+          onSendChat={sendChat}
+        />
+      )}
       {searchedId && !loading && !delivery && (
         <TrackNotFound id={searchedId} error={error} onRetry={() => lookup(searchedId)} />
       )}
