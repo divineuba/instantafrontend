@@ -328,6 +328,67 @@ export function getAdminCrypto() {
   return apiFetch<AdminCrypto>("/admin/crypto");
 }
 
+export type CryptoTxnType = "BUY" | "SELL" | "SWAP" | "SEND" | "RECEIVE" | "WITHDRAW";
+
+export interface AdminCryptoFeeRule {
+  id: string;
+  txnType: CryptoTxnType;
+  feeBps: number;
+  minFeeUsdCents: number;
+  updatedAt: string;
+}
+
+export function getAdminCryptoFeeRules() {
+  return apiFetch<AdminCryptoFeeRule[]>("/admin/crypto/fee-rules");
+}
+
+export function updateAdminCryptoFeeRule(txnType: CryptoTxnType, input: { feeBps: number; minFeeUsdCents: number }) {
+  return apiFetch<AdminCryptoFeeRule>(`/admin/crypto/fee-rules/${encodeURIComponent(txnType)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface AdminCryptoAsset {
+  id: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getAdminCryptoAssets() {
+  return apiFetch<AdminCryptoAsset[]>("/admin/crypto/assets");
+}
+
+export function toggleAdminCryptoAsset(symbol: string) {
+  return apiFetch<AdminCryptoAsset>(`/admin/crypto/assets/${encodeURIComponent(symbol)}/toggle`, {
+    method: "PATCH",
+  });
+}
+
+export interface AdminCryptoOpenOrder {
+  id: string;
+  type: "LIMIT_BUY" | "LIMIT_SELL";
+  status: "OPEN" | "FILLED" | "CANCELLED";
+  assetSymbol: string;
+  limitPriceUsdCents: number;
+  amount: string | null;
+  nairaAmountCents: number | null;
+  createdAt: string;
+  user: { firstName: string; lastName: string; email: string };
+}
+
+export function getAdminCryptoOpenOrders() {
+  return apiFetch<AdminCryptoOpenOrder[]>("/admin/crypto/orders");
+}
+
+export function forceCancelAdminCryptoOrder(id: string) {
+  return apiFetch<{ ok: true }>(`/admin/crypto/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+}
+
 // ---- Dating (Love) ---------------------------------------------------------------
 
 export interface AdminDating {
