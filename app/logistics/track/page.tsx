@@ -43,6 +43,30 @@ function formatTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/** The day part of an ETA or pickup time, or null when it's today, so a
+ * Standard (1–2 day) or scheduled delivery doesn't read as "today at 14:00". */
+function formatDayIfNotToday(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (d.toDateString() === new Date().toDateString()) return null;
+  return d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+}
+
+function EtaDay({ delivery }: { delivery: Pick<TrackedDelivery, "eta" | "status" | "scheduledFor"> }) {
+  const etaDay = formatDayIfNotToday(delivery.eta);
+  const pickupScheduled = delivery.status === "PENDING" && delivery.scheduledFor;
+  if (!etaDay && !pickupScheduled) return null;
+  return (
+    <span className="text-sm text-neutral-700">
+      {etaDay}
+      {etaDay && pickupScheduled ? " · " : ""}
+      {pickupScheduled
+        ? `Pickup scheduled ${formatDayIfNotToday(delivery.scheduledFor) ?? "today"}, ${formatTime(delivery.scheduledFor)}`
+        : ""}
+    </span>
+  );
+}
+
 function formatDistanceLabel(weightBand?: string) {
   const band = WEIGHT_BANDS.find((b) => b.key === weightBand);
   return band?.label ?? "Up to 5 kg";
@@ -292,11 +316,18 @@ function TrackResult({
       title: "In transit",
       sub: "Left the pickup hub",
     },
-    idx >= 0 && {
-      time: formatTime(delivery.createdAt),
-      title: "Picked up",
-      sub: `Signed by ${delivery.pickupContact}`,
-    },
+    idx >= 0 &&
+      delivery.status !== "PENDING" && {
+        time: formatTime(delivery.createdAt),
+        title: "Picked up",
+        sub: `Signed by ${delivery.pickupContact}`,
+      },
+    delivery.status === "PENDING" &&
+      delivery.scheduledFor && {
+        time: formatTime(delivery.scheduledFor),
+        title: "Pickup scheduled",
+        sub: formatDayIfNotToday(delivery.scheduledFor) ?? "Today",
+      },
     {
       time: formatTime(delivery.createdAt),
       title: "Rider assigned",
@@ -324,6 +355,7 @@ function TrackResult({
             <span className="text-[48px] sm:text-[64px] font-semibold leading-none text-accent-700">
               {formatTime(delivery.eta)}
             </span>
+            <EtaDay delivery={delivery} />
             <span className="text-sm text-neutral-700">{delivery.destinationAddress}</span>
           </div>
 
@@ -339,9 +371,17 @@ function TrackResult({
               <div className="text-xl font-semibold">{delivery.riderName}</div>
               <div className="text-[13px] text-neutral-700">Motorbike · {delivery.riderPhone}</div>
             </div>
-            <Button variant="secondary" size="icon" aria-label="Call rider">
-              <Icon name="phone" size={16} />
-            </Button>
+            {delivery.riderPhone && (
+              <LinkButton
+                href={`tel:${delivery.riderPhone.replace(/[^\d+]/g, "")}`}
+                variant="secondary"
+                size="icon"
+                aria-label={`Call ${delivery.riderName ?? "rider"}`}
+                title={`Call ${delivery.riderPhone}`}
+              >
+                <Icon name="phone" size={16} />
+              </LinkButton>
+            )}
             <Button
               variant="secondary"
               size="icon"
@@ -439,6 +479,7 @@ function LimitedTrackResult({
           <span className="text-[48px] sm:text-[64px] font-semibold leading-none text-accent-700">
             {formatTime(delivery.eta)}
           </span>
+          <EtaDay delivery={delivery} />
           <span className="text-sm text-neutral-700">
             {speed?.name ?? delivery.speed}
             {delivery.riderName ? ` · Rider ${delivery.riderName}` : ""}

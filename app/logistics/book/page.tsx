@@ -24,12 +24,24 @@ import {
  * keystroke, so debounce it rather than re-quoting on every character. */
 const QUOTE_DEBOUNCE_MS = 400;
 
-/** Combines the schedule step's date + 2-hour-window picks into the ISO
- * datetime the backend's `scheduledFor` field expects. */
-function toScheduledForIso(date: string, window: string): string | undefined {
-  if (!date) return undefined;
-  const start = window.split(/[–-]/)[0]?.trim();
-  return `${date}T${start || "09:00"}:00`;
+/** Scheduled pickups can be booked this many days ahead; the backend
+ * enforces the same limit. */
+const SCHEDULE_AHEAD_DAYS = 14;
+
+/** A yyyy-mm-dd string for a local calendar day, as `<input type="date">` uses. */
+function toDateInputValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The start of the chosen pickup window as a Date in the visitor's own time
+ * zone, from the schedule step's date + 2-hour-window picks. */
+function scheduledPickup(date: string, window: string): Date | null {
+  if (!date) return null;
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = (window.split(/[–-]/)[0]?.trim() || "09:00").split(":").map(Number);
+  const at = new Date(y, m - 1, d, hh, mm);
+  return Number.isNaN(at.getTime()) ? null : at;
 }
 
 const STEP_DEFS: { label: string; icon: IconName }[] = [
@@ -37,7 +49,7 @@ const STEP_DEFS: { label: string; icon: IconName }[] = [
   { label: "Destination", icon: "pin" },
   { label: "Package", icon: "package" },
   { label: "Delivery type", icon: "truck" },
-  { label: "Review & pay", icon: "check" },
+  { label: "Review", icon: "check" },
 ];
 
 const STEP_TITLES = [
@@ -72,7 +84,6 @@ interface FormState {
   speed: DeliverySpeedKey;
   scheduleDate: string;
   scheduleWindow: string;
-  paymentMethod: string;
 }
 
 const INITIAL_STATE: FormState = {
@@ -92,7 +103,6 @@ const INITIAL_STATE: FormState = {
   speed: "EXPRESS",
   scheduleDate: "",
   scheduleWindow: "09:00 – 11:00",
-  paymentMethod: "Visa •••• 4821",
 };
 
 function StepBar({ step, onGo }: { step: number; onGo: (i: number) => void }) {
@@ -227,10 +237,25 @@ export default function LogisticsBookPage() {
     };
   }, [form.pickupAddress, form.destinationAddress, form.speed, form.weightBand, form.insured]);
 
+  const today = new Date();
+  const minScheduleDate = toDateInputValue(today);
+  const maxScheduleDate = toDateInputValue(
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() + SCHEDULE_AHEAD_DAYS),
+  );
+  const pickupAt = scheduledPickup(form.scheduleDate, form.scheduleWindow);
+  const scheduleError = (() => {
+    if (form.speed !== "SCHEDULED" || !form.scheduleDate) return undefined;
+    if (!pickupAt || form.scheduleDate < minScheduleDate || form.scheduleDate > maxScheduleDate) {
+      return `Choose a date in the next ${SCHEDULE_AHEAD_DAYS} days`;
+    }
+    if (pickupAt.getTime() <= today.getTime()) return "That window has already started. Choose a later one.";
+    return undefined;
+  })();
+
   const canContinue = (() => {
     if (step === 0) return form.pickupAddress && form.pickupContact && form.pickupPhone;
     if (step === 1) return form.destinationAddress && form.destinationContact && form.destinationPhone;
-    if (step === 3) return form.speed !== "SCHEDULED" || !!form.scheduleDate;
+    if (step === 3) return form.speed !== "SCHEDULED" || (!!form.scheduleDate && !scheduleError);
     if (step === 4) return !!quote && !quoteError;
     return true;
   })();
@@ -256,8 +281,9 @@ export default function LogisticsBookPage() {
         packageDescription: form.packageDescription || PACKAGE_TYPES[form.packageTypeIdx].label,
         fragile: PACKAGE_TYPES[form.packageTypeIdx].fragile,
         notes: form.pickupNotes || undefined,
-        scheduledFor:
-          form.speed === "SCHEDULED" ? toScheduledForIso(form.scheduleDate, form.scheduleWindow) : undefined,
+        // An instant (UTC, with Z) for the window the visitor picked in their
+        // own time zone, never a zone-less local time.
+        scheduledFor: form.speed === "SCHEDULED" ? pickupAt?.toISOString() : undefined,
       });
       setBooked(delivery);
       window.scrollTo(0, 0);
@@ -281,8 +307,8 @@ export default function LogisticsBookPage() {
             </span>
             <h1 className="text-[clamp(32px,4.4vw,48px)] leading-[1.05]">Delivery booked</h1>
             <p className="text-base text-neutral-800 m-0">
-              A rider has been assigned. We&apos;ve sent the tracking link to
-              you and {form.destinationContact}.
+              {booked.riderName ? `${booked.riderName} will pick it up. ` : ""}
+              Share the tracking ID with {form.destinationContact} so they can follow it too.
             </p>
             <div className="grid grid-cols-3 w-full border border-divider rounded-lg">
               <div className="p-4 border-r border-divider">
@@ -294,7 +320,7 @@ export default function LogisticsBookPage() {
                 <div className="text-2xl font-semibold">{sp.name}</div>
               </div>
               <div className="p-4">
-                <div className="text-xs text-neutral-600">Paid</div>
+                <div className="text-xs text-neutral-600">Price</div>
                 <div className="text-2xl font-semibold">{fmtUsd(Number(booked.total))}</div>
               </div>
             </div>
@@ -485,14 +511,18 @@ export default function LogisticsBookPage() {
                     <Field
                       label="Pickup date"
                       required
-                      error={scheduleDateTouched && !form.scheduleDate ? "Pickup date is required" : undefined}
+                      error={
+                        scheduleDateTouched && !form.scheduleDate ? "Pickup date is required" : scheduleError
+                      }
                     >
                       <Input
                         type="date"
+                        min={minScheduleDate}
+                        max={maxScheduleDate}
                         value={form.scheduleDate}
                         onChange={(e) => set("scheduleDate", e.target.value)}
                         onBlur={() => setScheduleDateTouched(true)}
-                        invalid={scheduleDateTouched && !form.scheduleDate}
+                        invalid={(scheduleDateTouched && !form.scheduleDate) || !!scheduleError}
                       />
                     </Field>
                     <Field label="Pickup window">
@@ -523,7 +553,15 @@ export default function LogisticsBookPage() {
                       (form.insured ? " · covered to $500" : ""),
                     go: 2,
                   },
-                  { k: "Delivery", v: sp.name, sub: sp.time, go: 3 },
+                  {
+                    k: "Delivery",
+                    v: sp.name,
+                    sub:
+                      form.speed === "SCHEDULED" && pickupAt
+                        ? `Pickup ${pickupAt.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}, ${form.scheduleWindow}`
+                        : sp.time,
+                    go: 3,
+                  },
                 ].map((r) => (
                   <div
                     key={r.k}
@@ -545,16 +583,12 @@ export default function LogisticsBookPage() {
                     </button>
                   </div>
                 ))}
-                <Field label="Payment method">
-                  <Select
-                    value={form.paymentMethod}
-                    onChange={(e) => set("paymentMethod", e.target.value)}
-                  >
-                    <option>Visa •••• 4821</option>
-                    <option>Instanta wallet · $42.10</option>
-                    <option>Pay on pickup</option>
-                  </Select>
-                </Field>
+                <div className="flex justify-between items-baseline gap-4 pb-4 border-b border-divider">
+                  <span className="text-[11px] tracking-[.12em] uppercase text-neutral-600">Price</span>
+                  <span className="text-[15px] font-medium">
+                    {quoteLoading ? "…" : quote ? fmtUsd(quote.total) : "—"}
+                  </span>
+                </div>
                 {bookError && <p className="text-sm text-error m-0">{bookError}</p>}
               </>
             )}

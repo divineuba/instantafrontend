@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -171,6 +172,17 @@ export default function ProfilePage() {
               </Button>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <SectionKicker>Delete account</SectionKicker>
+        <div className="flex items-center gap-3 px-4 py-3 bg-card border border-divider rounded-lg">
+          <Icon name="trash" size={16} />
+          <span className="flex-1 text-sm">Ask our support team to delete your account and personal data.</span>
+          <Link href="/account/delete" className="text-sm text-accent-700">
+            Delete account
+          </Link>
         </div>
       </div>
     </div>
