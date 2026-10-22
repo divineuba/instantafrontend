@@ -237,14 +237,17 @@ export default function LogisticsBookPage() {
     };
   }, [form.pickupAddress, form.destinationAddress, form.speed, form.weightBand, form.insured]);
 
-  const today = new Date();
-  const minScheduleDate = toDateInputValue(today);
-  const maxScheduleDate = toDateInputValue(
-    new Date(today.getFullYear(), today.getMonth(), today.getDate() + SCHEDULE_AHEAD_DAYS),
-  );
+  // Only read the clock once Scheduled is picked (never during prerender,
+  // where Next.js treats the current time as an unstable value).
+  const scheduling = form.speed === "SCHEDULED";
+  const today = scheduling ? new Date() : null;
+  const minScheduleDate = today ? toDateInputValue(today) : undefined;
+  const maxScheduleDate = today
+    ? toDateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() + SCHEDULE_AHEAD_DAYS))
+    : undefined;
   const pickupAt = scheduledPickup(form.scheduleDate, form.scheduleWindow);
   const scheduleError = (() => {
-    if (form.speed !== "SCHEDULED" || !form.scheduleDate) return undefined;
+    if (!today || !minScheduleDate || !maxScheduleDate || !form.scheduleDate) return undefined;
     if (!pickupAt || form.scheduleDate < minScheduleDate || form.scheduleDate > maxScheduleDate) {
       return `Choose a date in the next ${SCHEDULE_AHEAD_DAYS} days`;
     }
