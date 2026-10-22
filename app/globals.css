@@ -55,6 +55,57 @@
 
   --color-footer-bg: #252733;
   --color-footer-bar: #1a1c24;
+
+  /* The site is light-only for now: tell the browser so native controls
+     (inputs, scrollbars, autofill) don't flip to dark on a dark-mode OS
+     while the page around them stays light. */
+  color-scheme: light;
+
+  /* Per-space accents, shared with the mobile app
+     (mobile/lib/core/design/tokens.dart, InstantaSpace). Each carries
+     white text at 4.8:1 or better; "-ink" is the same hue deep enough for
+     small text on its "-soft" tint (7:1+). The shell itself stays plum. */
+  --space-logistics: #b8501c;
+  --space-logistics-ink: #7a3410;
+  --space-logistics-soft: #fbefe8;
+  --space-travels: #2d5b8c;
+  --space-travels-ink: #1f4064;
+  --space-travels-soft: #eaf1f8;
+  --space-crypto: #017e84;
+  --space-crypto-ink: #01565a;
+  --space-crypto-soft: #e5f4f4;
+  --space-love: #c23a5e;
+  --space-love-ink: #8a2441;
+  --space-love-soft: #fcebf0;
+
+  /* Defaults so space-scoped utilities fall back to the brand plum. */
+  --space: var(--color-accent);
+  --space-ink: var(--color-accent-800);
+  --space-soft: var(--color-accent-100);
+}
+
+/* Opt-in space scopes: wrap a subtree in one of these and the
+   bg-space / text-space / bg-space-soft / text-space-ink utilities pick up
+   that space's accent. */
+.space-logistics {
+  --space: var(--space-logistics);
+  --space-ink: var(--space-logistics-ink);
+  --space-soft: var(--space-logistics-soft);
+}
+.space-travels {
+  --space: var(--space-travels);
+  --space-ink: var(--space-travels-ink);
+  --space-soft: var(--space-travels-soft);
+}
+.space-crypto {
+  --space: var(--space-crypto);
+  --space-ink: var(--space-crypto-ink);
+  --space-soft: var(--space-crypto-soft);
+}
+.space-love {
+  --space: var(--space-love);
+  --space-ink: var(--space-love-ink);
+  --space-soft: var(--space-love-soft);
 }
 
 @theme inline {
@@ -107,6 +158,10 @@
 
   --color-footer-bg: var(--color-footer-bg);
   --color-footer-bar: var(--color-footer-bar);
+
+  --color-space: var(--space);
+  --color-space-ink: var(--space-ink);
+  --color-space-soft: var(--space-soft);
 }
 
 /* ---------------------------------------------------------------------

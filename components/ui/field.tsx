@@ -41,11 +41,43 @@ export function Field({
       )}
       {children}
       {hint && !error && (
-        <span className="text-xs text-neutral-600">{hint}</span>
+        <span
+          id={htmlFor ? fieldHintId(htmlFor) : undefined}
+          className="text-xs text-neutral-600"
+        >
+          {hint}
+        </span>
       )}
-      {error && <span className="text-xs text-error">{error}</span>}
+      {error && (
+        <span
+          id={htmlFor ? fieldErrorId(htmlFor) : undefined}
+          className="text-xs text-error"
+        >
+          {error}
+        </span>
+      )}
     </div>
   );
+}
+
+/** Ids Field gives its hint and error text when it has `htmlFor`, so the
+ * control can point `aria-describedby` at whichever one is showing. */
+export function fieldHintId(id: string) {
+  return `${id}-hint`;
+}
+
+export function fieldErrorId(id: string) {
+  return `${id}-error`;
+}
+
+/** The `aria-describedby` value for a control inside a Field. */
+export function fieldDescribedBy(
+  id: string,
+  { hint, error }: { hint?: unknown; error?: unknown },
+): string | undefined {
+  if (error) return fieldErrorId(id);
+  if (hint) return fieldHintId(id);
+  return undefined;
 }
 
 export const Input = React.forwardRef<
@@ -55,6 +87,7 @@ export const Input = React.forwardRef<
   return (
     <input
       ref={ref}
+      aria-invalid={invalid || undefined}
       className={cn(
         "w-full min-h-[38px] px-3 py-2 text-sm text-text bg-white border rounded-md transition-[border-color,box-shadow] duration-150 outline-none",
         "placeholder:text-neutral-500",

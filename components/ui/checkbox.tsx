@@ -22,13 +22,13 @@ export const Checkbox = React.forwardRef<
           "transition-colors duration-150",
           "peer-hover:border-neutral-400",
           "peer-checked:bg-accent peer-checked:border-accent",
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-accent-200 peer-focus-visible:ring-offset-1",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-1",
         )}
       >
         <Check
           size={12}
           strokeWidth={3}
-          className="text-white opacity-0 scale-75 transition-all duration-150 peer-checked:opacity-100 peer-checked:scale-100"
+          className="text-white opacity-0 scale-75 transition-all duration-150 [.peer:checked~span_&]:opacity-100 [.peer:checked~span_&]:scale-100"
         />
       </span>
     </span>
