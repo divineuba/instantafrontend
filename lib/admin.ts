@@ -229,6 +229,85 @@ export function deletePricingRule(id: string) {
   return apiFetch<{ ok: true }>(`/admin/pricing/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+// ---- Pickup cities and windows (scheduled deliveries) --------------------------
+
+export interface AdminPickupWindow {
+  id: string;
+  /** City-local "HH:mm". */
+  startTime: string;
+  endTime: string;
+  active: boolean;
+  sortOrder: number;
+  /** Deliveries booked into this window; a used window can only be deactivated. */
+  deliveries: number;
+}
+
+export interface AdminPickupCity {
+  id: string;
+  name: string;
+  /** IANA time zone the city's windows are read in, e.g. Africa/Lagos. */
+  timezone: string;
+  active: boolean;
+  bookingHorizonDays: number;
+  deliveries: number;
+  createdAt: string;
+  updatedAt: string;
+  windows: AdminPickupWindow[];
+}
+
+export interface PickupDeleteResult {
+  ok: true;
+  deleted: boolean;
+  deactivated: boolean;
+  deliveries: number;
+}
+
+export function getAdminPickupCities() {
+  return apiFetch<AdminPickupCity[]>("/admin/pickup-cities");
+}
+
+export function createPickupCity(input: { name: string; timezone: string; active?: boolean; bookingHorizonDays?: number }) {
+  return apiFetch<AdminPickupCity>("/admin/pickup-cities", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function updatePickupCity(
+  id: string,
+  input: Partial<{ name: string; timezone: string; active: boolean; bookingHorizonDays: number }>,
+) {
+  return apiFetch<AdminPickupCity>(`/admin/pickup-cities/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deletePickupCity(id: string) {
+  return apiFetch<PickupDeleteResult>(`/admin/pickup-cities/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function createPickupWindow(
+  cityId: string,
+  input: { startTime: string; endTime: string; active?: boolean; sortOrder?: number },
+) {
+  return apiFetch<AdminPickupWindow>(`/admin/pickup-cities/${encodeURIComponent(cityId)}/windows`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updatePickupWindow(
+  id: string,
+  input: Partial<{ startTime: string; endTime: string; active: boolean; sortOrder: number }>,
+) {
+  return apiFetch<AdminPickupWindow>(`/admin/pickup-windows/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deletePickupWindow(id: string) {
+  return apiFetch<PickupDeleteResult>(`/admin/pickup-windows/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 // ---- Bookings ------------------------------------------------------------------
 
 export type BookingsTab = "book" | "refunds" | "routes" | "docs";

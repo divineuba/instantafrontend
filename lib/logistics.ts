@@ -255,9 +255,50 @@ export interface CreateDeliveryRequest extends QuoteRequest {
   packageDescription: string;
   fragile?: boolean;
   notes?: string;
-  /** Required when `speed` is SCHEDULED; the booked pickup window's start time. */
+  /** Required when `speed` is SCHEDULED: a slot's `startsAt` from
+   * `getPickupWindows()`, sent unchanged. */
   scheduledFor?: string;
+  /** Required when `speed` is SCHEDULED: the city the slot belongs to. */
+  pickupCityId?: string;
   workspaceId?: string;
+}
+
+/** One bookable scheduled-pickup slot. Times are wall-clock times in the
+ * city's own zone; `startsAt`/`endsAt` are the matching UTC instants. */
+export interface PickupSlot {
+  windowId: string;
+  /** City-local calendar day, yyyy-mm-dd. */
+  date: string;
+  /** e.g. "Fri 23 Oct" */
+  dateLabel: string;
+  startTime: string;
+  endTime: string;
+  startsAt: string;
+  endsAt: string;
+  utcOffset: string;
+  /** e.g. "09:00–11:00 Lagos time" */
+  label: string;
+}
+
+export interface PickupCity {
+  id: string;
+  name: string;
+  timezone: string;
+  utcOffset: string;
+  bookingHorizonDays: number;
+  windows: { id: string; startTime: string; endTime: string; label: string }[];
+  slots: PickupSlot[];
+}
+
+export interface PickupWindowsResponse {
+  generatedAt: string;
+  cities: PickupCity[];
+}
+
+/** Cities that take scheduled pickups, with every bookable slot worked out
+ * by the server in each city's time zone. */
+export function getPickupWindows() {
+  return apiFetch<PickupWindowsResponse>("/deliveries/pickup-windows");
 }
 
 export interface DeliveryPackage {

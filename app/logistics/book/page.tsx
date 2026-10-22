@@ -14,9 +14,11 @@ import {
   fmtUsd,
   quoteDelivery,
   createDelivery,
+  getPickupWindows,
   type DeliverySpeedKey,
   type WeightBandKey,
   type Delivery,
+  type PickupCity,
   type QuoteResponse,
 } from "@/lib/logistics";
 
@@ -24,24 +26,11 @@ import {
  * keystroke, so debounce it rather than re-quoting on every character. */
 const QUOTE_DEBOUNCE_MS = 400;
 
-/** Scheduled pickups can be booked this many days ahead; the backend
- * enforces the same limit. */
-const SCHEDULE_AHEAD_DAYS = 14;
-
-/** A yyyy-mm-dd string for a local calendar day, as `<input type="date">` uses. */
-function toDateInputValue(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-/** The start of the chosen pickup window as a Date in the visitor's own time
- * zone, from the schedule step's date + 2-hour-window picks. */
-function scheduledPickup(date: string, window: string): Date | null {
-  if (!date) return null;
-  const [y, m, d] = date.split("-").map(Number);
-  const [hh, mm] = (window.split(/[–-]/)[0]?.trim() || "09:00").split(":").map(Number);
-  const at = new Date(y, m - 1, d, hh, mm);
-  return Number.isNaN(at.getTime()) ? null : at;
+/** The city a pickup address names, if it names exactly one of them. */
+function cityInAddress(cities: PickupCity[], address: string): PickupCity | undefined {
+  const text = address.toLowerCase();
+  const named = cities.filter((c) => text.includes(c.name.toLowerCase()));
+  return named.length === 1 ? named[0] : undefined;
 }
 
 const STEP_DEFS: { label: string; icon: IconName }[] = [
@@ -82,8 +71,11 @@ interface FormState {
   packageDescription: string;
   insured: boolean;
   speed: DeliverySpeedKey;
+  /** Scheduled pickups: the city, its local date (yyyy-mm-dd) and the chosen
+   * slot's `startsAt`, all from the server's pickup-window list. */
+  pickupCityId: string;
   scheduleDate: string;
-  scheduleWindow: string;
+  scheduleSlot: string;
 }
 
 const INITIAL_STATE: FormState = {
@@ -101,8 +93,9 @@ const INITIAL_STATE: FormState = {
   packageDescription: "Signed contract documents in an envelope",
   insured: true,
   speed: "EXPRESS",
+  pickupCityId: "",
   scheduleDate: "",
-  scheduleWindow: "09:00 – 11:00",
+  scheduleSlot: "",
 };
 
 function StepBar({ step, onGo }: { step: number; onGo: (i: number) => void }) {
@@ -198,7 +191,8 @@ export default function LogisticsBookPage() {
   const [booking, setBooking] = React.useState(false);
   const [bookError, setBookError] = React.useState<string | null>(null);
   const [booked, setBooked] = React.useState<Delivery | null>(null);
-  const [scheduleDateTouched, setScheduleDateTouched] = React.useState(false);
+  const [pickupCities, setPickupCities] = React.useState<PickupCity[] | null>(null);
+  const [pickupError, setPickupError] = React.useState<string | null>(null);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -237,28 +231,50 @@ export default function LogisticsBookPage() {
     };
   }, [form.pickupAddress, form.destinationAddress, form.speed, form.weightBand, form.insured]);
 
-  // Only read the clock once Scheduled is picked (never during prerender,
-  // where Next.js treats the current time as an unstable value).
+  // Scheduled pickups: the server lists each city's bookable slots, already
+  // worked out in that city's time zone, so nothing here depends on the
+  // visitor's own clock or zone. Re-fetched each time Scheduled is picked so
+  // slots that have since started drop out.
   const scheduling = form.speed === "SCHEDULED";
-  const today = scheduling ? new Date() : null;
-  const minScheduleDate = today ? toDateInputValue(today) : undefined;
-  const maxScheduleDate = today
-    ? toDateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() + SCHEDULE_AHEAD_DAYS))
-    : undefined;
-  const pickupAt = scheduledPickup(form.scheduleDate, form.scheduleWindow);
-  const scheduleError = (() => {
-    if (!today || !minScheduleDate || !maxScheduleDate || !form.scheduleDate) return undefined;
-    if (!pickupAt || form.scheduleDate < minScheduleDate || form.scheduleDate > maxScheduleDate) {
-      return `Choose a date in the next ${SCHEDULE_AHEAD_DAYS} days`;
-    }
-    if (pickupAt.getTime() <= today.getTime()) return "That window has already started. Choose a later one.";
-    return undefined;
-  })();
+  React.useEffect(() => {
+    if (!scheduling) return;
+    let cancelled = false;
+    getPickupWindows()
+      .then((res) => {
+        if (cancelled) return;
+        setPickupError(null);
+        setPickupCities(res.cities);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPickupCities(null);
+        setPickupError(err instanceof ApiError ? err.message : "Couldn't load pickup times. Try again.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scheduling]);
+
+  // Until the visitor picks, default to the one city the pickup address names
+  // (or the only city on offer); date and window default to the first open.
+  const pickupCity =
+    pickupCities?.find((c) => c.id === form.pickupCityId) ??
+    (pickupCities && !form.pickupCityId
+      ? (cityInAddress(pickupCities, form.pickupAddress) ?? (pickupCities.length === 1 ? pickupCities[0] : undefined))
+      : undefined);
+  const scheduleDates = pickupCity
+    ? [...new Map(pickupCity.slots.map((s) => [s.date, s.dateLabel])).entries()]
+    : [];
+  const scheduleDate = scheduleDates.some(([d]) => d === form.scheduleDate)
+    ? form.scheduleDate
+    : (scheduleDates[0]?.[0] ?? "");
+  const dateSlots = pickupCity?.slots.filter((s) => s.date === scheduleDate) ?? [];
+  const pickupSlot = dateSlots.find((s) => s.startsAt === form.scheduleSlot) ?? dateSlots[0];
 
   const canContinue = (() => {
     if (step === 0) return form.pickupAddress && form.pickupContact && form.pickupPhone;
     if (step === 1) return form.destinationAddress && form.destinationContact && form.destinationPhone;
-    if (step === 3) return form.speed !== "SCHEDULED" || (!!form.scheduleDate && !scheduleError);
+    if (step === 3) return form.speed !== "SCHEDULED" || (!!pickupCity && !!pickupSlot);
     if (step === 4) return !!quote && !quoteError;
     return true;
   })();
@@ -284,9 +300,10 @@ export default function LogisticsBookPage() {
         packageDescription: form.packageDescription || PACKAGE_TYPES[form.packageTypeIdx].label,
         fragile: PACKAGE_TYPES[form.packageTypeIdx].fragile,
         notes: form.pickupNotes || undefined,
-        // An instant (UTC, with Z) for the window the visitor picked in their
-        // own time zone, never a zone-less local time.
-        scheduledFor: form.speed === "SCHEDULED" ? pickupAt?.toISOString() : undefined,
+        // The slot's start exactly as the server listed it: a UTC instant for
+        // the window's start in the city's own time zone.
+        scheduledFor: form.speed === "SCHEDULED" ? pickupSlot?.startsAt : undefined,
+        pickupCityId: form.speed === "SCHEDULED" ? pickupCity?.id : undefined,
       });
       setBooked(delivery);
       window.scrollTo(0, 0);
@@ -509,37 +526,77 @@ export default function LogisticsBookPage() {
                     );
                   })}
                 </div>
-                {form.speed === "SCHEDULED" && (
-                  <div className="grid sm:grid-cols-2 gap-4 mt-2">
-                    <Field
-                      label="Pickup date"
-                      required
-                      error={
-                        scheduleDateTouched && !form.scheduleDate ? "Pickup date is required" : scheduleError
-                      }
-                    >
-                      <Input
-                        type="date"
-                        min={minScheduleDate}
-                        max={maxScheduleDate}
-                        value={form.scheduleDate}
-                        onChange={(e) => set("scheduleDate", e.target.value)}
-                        onBlur={() => setScheduleDateTouched(true)}
-                        invalid={(scheduleDateTouched && !form.scheduleDate) || !!scheduleError}
-                      />
-                    </Field>
-                    <Field label="Pickup window">
-                      <Select
-                        value={form.scheduleWindow}
-                        onChange={(e) => set("scheduleWindow", e.target.value)}
+                {form.speed === "SCHEDULED" &&
+                  (pickupError ? (
+                    <p className="text-sm text-error m-0 mt-2">{pickupError}</p>
+                  ) : !pickupCities ? (
+                    <p className="text-sm text-neutral-700 m-0 mt-2">Loading pickup times…</p>
+                  ) : pickupCities.length === 0 ? (
+                    <p className="text-sm text-neutral-700 m-0 mt-2">
+                      Scheduled pickups aren&apos;t open in any city right now. Choose another option.
+                    </p>
+                  ) : (
+                    <div className="grid sm:grid-cols-3 gap-4 mt-2">
+                      <Field
+                        label="Pickup city"
+                        htmlFor="pickup-city"
+                        required
+                        hint={pickupCity ? `Times are ${pickupCity.name} time (${pickupCity.timezone})` : undefined}
                       >
-                        <option>09:00 – 11:00</option>
-                        <option>11:00 – 13:00</option>
-                        <option>14:00 – 16:00</option>
-                      </Select>
-                    </Field>
-                  </div>
-                )}
+                        <Select
+                          id="pickup-city"
+                          value={pickupCity?.id ?? ""}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, pickupCityId: e.target.value, scheduleDate: "", scheduleSlot: "" }))
+                          }
+                        >
+                          {!pickupCity && (
+                            <option value="" disabled>
+                              Choose a city
+                            </option>
+                          )}
+                          {pickupCities.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      <Field
+                        label="Pickup date"
+                        htmlFor="pickup-date"
+                        required
+                        error={pickupCity && scheduleDates.length === 0 ? "No pickup times left in this city" : undefined}
+                      >
+                        <Select
+                          id="pickup-date"
+                          value={scheduleDate}
+                          disabled={scheduleDates.length === 0}
+                          onChange={(e) => setForm((f) => ({ ...f, scheduleDate: e.target.value, scheduleSlot: "" }))}
+                        >
+                          {scheduleDates.map(([date, label]) => (
+                            <option key={date} value={date}>
+                              {label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      <Field label="Pickup window" htmlFor="pickup-window" required>
+                        <Select
+                          id="pickup-window"
+                          value={pickupSlot?.startsAt ?? ""}
+                          disabled={dateSlots.length === 0}
+                          onChange={(e) => set("scheduleSlot", e.target.value)}
+                        >
+                          {dateSlots.map((slot) => (
+                            <option key={slot.startsAt} value={slot.startsAt}>
+                              {slot.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </div>
+                  ))}
               </>
             )}
 
@@ -560,8 +617,8 @@ export default function LogisticsBookPage() {
                     k: "Delivery",
                     v: sp.name,
                     sub:
-                      form.speed === "SCHEDULED" && pickupAt
-                        ? `Pickup ${pickupAt.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}, ${form.scheduleWindow}`
+                      form.speed === "SCHEDULED" && pickupSlot
+                        ? `Pickup ${pickupSlot.dateLabel}, ${pickupSlot.label}`
                         : sp.time,
                     go: 3,
                   },
