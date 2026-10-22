@@ -8,15 +8,35 @@ import { LinkButton } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAssets, usdCentsToStr, type CryptoAsset } from "@/lib/crypto";
+import { getAssets, priceToStr, type CryptoAsset } from "@/lib/crypto";
 import { PriceChart } from "@/components/crypto/price-chart";
 import { Select } from "@/components/ui/field";
 
 const ANSWERS: { icon: IconName; q: string; title: string; body: string }[] = [
-  { icon: "bitcoin", q: "What", title: "6 major assets", body: "Bitcoin, Ethereum, USDT, USDC, BNB and Solana, with more on the way." },
-  { icon: "chart", q: "Prices", title: "Live market rates", body: "Prices update from the live market every minute, not a fixed spread." },
-  { icon: "wallet", q: "Cash out", title: "Straight to Naira", body: "Sell or withdraw any balance directly to your Instanta wallet." },
-  { icon: "swap", q: "Trading", title: "Buy, sell, swap, send", body: "Move between assets or send to another Instanta user instantly." },
+  {
+    icon: "bitcoin",
+    q: "What",
+    title: "6 major assets",
+    body: "Bitcoin, Ethereum, USDT, USDC, BNB and Solana, with more on the way.",
+  },
+  {
+    icon: "chart",
+    q: "Prices",
+    title: "Live market rates",
+    body: "Prices update from the live market every minute, not a fixed spread.",
+  },
+  {
+    icon: "wallet",
+    q: "Cash out",
+    title: "Straight to Naira",
+    body: "Sell or withdraw any balance directly to your Instanta wallet.",
+  },
+  {
+    icon: "swap",
+    q: "Trading",
+    title: "Buy, sell, swap, send",
+    body: "Move between assets or send to another Instanta user instantly.",
+  },
 ];
 
 function PriceTicker() {
@@ -57,7 +77,9 @@ function PriceTicker() {
               {a.symbol}
               <span className="text-neutral-600 font-normal">{a.name}</span>
             </span>
-            <span className="text-sm font-semibold">{usdCentsToStr(a.priceUsdCents)}</span>
+            <span className="text-sm font-semibold">
+              {priceToStr(a.priceUsdCents)}
+            </span>
           </div>
         ))}
       </div>
@@ -96,7 +118,11 @@ function ChartSection() {
       <div className="p-6 bg-card border border-divider rounded-xl shadow-md flex flex-col gap-4">
         <div className="flex justify-between items-center flex-wrap gap-3">
           <span className="text-xl font-semibold">Market chart</span>
-          <Select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="w-auto">
+          <Select
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="w-auto"
+          >
             {assets?.map((a) => (
               <option key={a.symbol} value={a.symbol}>
                 {a.symbol} — {a.name}
@@ -128,10 +154,18 @@ export default function CryptoHomePage() {
               market prices, then withdraw straight to your Instanta wallet.
             </p>
             <div className="flex gap-3 flex-wrap">
-              <LinkButton href="/crypto/exchange" variant="primary" className="text-base px-6 py-3">
+              <LinkButton
+                href="/crypto/exchange"
+                variant="primary"
+                className="text-base px-6 py-3"
+              >
                 Open exchange
               </LinkButton>
-              <LinkButton href="/crypto/receive" variant="secondary" className="text-base px-6 py-3">
+              <LinkButton
+                href="/crypto/receive"
+                variant="secondary"
+                className="text-base px-6 py-3"
+              >
                 Receive crypto
               </LinkButton>
             </div>
@@ -148,7 +182,9 @@ export default function CryptoHomePage() {
                   <Icon name={a.icon} size={28} />
                   <span className="text-xs text-neutral-600">{a.q}</span>
                 </div>
-                <div className="text-xl font-semibold leading-tight">{a.title}</div>
+                <div className="text-xl font-semibold leading-tight">
+                  {a.title}
+                </div>
                 <p className="text-sm text-neutral-700 m-0">{a.body}</p>
               </div>
             ))}

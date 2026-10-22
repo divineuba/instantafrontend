@@ -13,7 +13,12 @@ import { Tag } from "@/components/ui/tag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
-import { getAssets, getReceiveAddress, type CryptoAsset } from "@/lib/crypto";
+import {
+  getAssets,
+  getReceiveAddress,
+  isFeatureNotAvailable,
+  type CryptoAsset,
+} from "@/lib/crypto";
 
 export default function CryptoReceivePage() {
   const { user, loading: authLoading } = useAuth();
@@ -24,6 +29,7 @@ export default function CryptoReceivePage() {
   const [address, setAddress] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [unavailable, setUnavailable] = React.useState(false);
 
   React.useEffect(() => {
     getAssets().then((a) => {
@@ -40,7 +46,13 @@ export default function CryptoReceivePage() {
       const res = await getReceiveAddress(symbol);
       setAddress(res.address);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't generate an address.");
+      if (isFeatureNotAvailable(err)) setUnavailable(true);
+      else
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Couldn't generate an address.",
+        );
     } finally {
       setBusy(false);
     }
@@ -62,9 +74,22 @@ export default function CryptoReceivePage() {
             <Card className="items-start gap-3">
               <Tag variant="accent">Sign in required</Tag>
               <CardTitle>Sign in to receive crypto</CardTitle>
-              <LinkButton href={`/login?next=${encodeURIComponent(pathname ?? "/crypto/receive")}`} variant="primary">
+              <LinkButton
+                href={`/login?next=${encodeURIComponent(pathname ?? "/crypto/receive")}`}
+                variant="primary"
+              >
                 Sign in
               </LinkButton>
+            </Card>
+          ) : unavailable ? (
+            <Card className="items-start gap-3">
+              <Tag variant="accent">Coming soon</Tag>
+              <CardTitle>Receiving crypto isn&apos;t available yet</CardTitle>
+              <p className="text-sm text-neutral-700 m-0">
+                Deposit addresses aren&apos;t connected to a blockchain yet, so
+                we can&apos;t show one. You can still receive crypto from
+                another Instanta user by email.
+              </p>
             </Card>
           ) : !assets ? (
             <Skeleton className="h-48 w-full rounded-lg" />
@@ -97,11 +122,16 @@ export default function CryptoReceivePage() {
                     <QRCodeSVG value={address} size={180} />
                   </div>
                   <div className="flex items-center gap-2.5 px-4 py-3 bg-accent-50 border border-accent-200 rounded-lg w-full">
-                    <Icon name="wallet" size={16} className="text-accent shrink-0" />
+                    <Icon
+                      name="wallet"
+                      size={16}
+                      className="text-accent shrink-0"
+                    />
                     <code className="text-sm flex-1 break-all">{address}</code>
                   </div>
                   <p className="text-xs text-neutral-600 m-0">
-                    Only send {symbol} to this address. Deposits are credited automatically.
+                    Only send {symbol} to this address. Deposits are credited
+                    automatically.
                   </p>
                 </div>
               )}

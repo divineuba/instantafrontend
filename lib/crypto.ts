@@ -1,22 +1,29 @@
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 
 export interface CryptoAsset {
   symbol: string;
   name: string;
   decimals: number;
   isActive: boolean;
-  priceUsdCents: number;
+  /** Last real price, or null if none has been fetched — never a placeholder. */
+  priceUsdCents: number | null;
+  priceUpdatedAt: string | null;
+  /** True when the price is too old to trade at (trades then answer 503). */
+  priceStale: boolean;
 }
 
 export interface CryptoHoldingRow {
   assetSymbol: string;
   balance: number;
-  priceUsdCents: number;
-  valueUsdCents: number;
-  valueNairaCents: number;
+  priceUsdCents: number | null;
+  priceUpdatedAt: string | null;
+  priceStale: boolean;
+  valueUsdCents: number | null;
+  valueNairaCents: number | null;
 }
 
-export type CryptoTxnType = "BUY" | "SELL" | "SWAP" | "SEND" | "RECEIVE" | "WITHDRAW";
+export type CryptoTxnType =
+  "BUY" | "SELL" | "SWAP" | "SEND" | "RECEIVE" | "WITHDRAW";
 export type CryptoTxnStatus = "PENDING" | "COMPLETED" | "FAILED";
 
 export interface CryptoTransactionRow {
@@ -88,7 +95,10 @@ export function getReceiveAddress(assetSymbol: string) {
   );
 }
 
-export function buyCrypto(input: { assetSymbol: string; nairaAmountCents: number }) {
+export function buyCrypto(input: {
+  assetSymbol: string;
+  nairaAmountCents: number;
+}) {
   return apiFetch<CryptoTransactionRow>("/crypto/buy", {
     method: "POST",
     body: JSON.stringify(input),
@@ -102,7 +112,11 @@ export function sellCrypto(input: { assetSymbol: string; amount: number }) {
   });
 }
 
-export function swapCrypto(input: { fromSymbol: string; toSymbol: string; amount: number }) {
+export function swapCrypto(input: {
+  fromSymbol: string;
+  toSymbol: string;
+  amount: number;
+}) {
   return apiFetch<CryptoTransactionRow>("/crypto/swap", {
     method: "POST",
     body: JSON.stringify(input),
@@ -182,11 +196,30 @@ export function usdCentsToStr(cents: number) {
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** A price that may be missing (live feed unavailable). */
+export function priceToStr(cents: number | null | undefined) {
+  return cents == null ? "Unavailable" : usdCentsToStr(cents);
+}
+
+/** The backend refuses simulated-money features (wallet top-up/withdraw,
+ * receive addresses, external sends) with 503 FEATURE_NOT_AVAILABLE unless
+ * they're enabled for the environment. */
+export function isFeatureNotAvailable(err: unknown) {
+  return (
+    err instanceof ApiError &&
+    err.status === 503 &&
+    (err.body as { code?: string } | null)?.code === "FEATURE_NOT_AVAILABLE"
+  );
+}
+
 export function nairaCentsToStr(cents: number) {
   return `₦${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function fmtAmount(amount: number | string) {
   const n = typeof amount === "string" ? Number(amount) : amount;
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+  });
 }

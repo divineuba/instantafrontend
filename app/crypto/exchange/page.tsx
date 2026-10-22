@@ -23,6 +23,7 @@ import {
   swapCrypto,
   createOrder,
   usdCentsToStr,
+  priceToStr,
   fmtAmount,
   type CryptoAsset,
   type CryptoHoldingRow,
@@ -39,14 +40,20 @@ export default function CryptoExchangePage() {
   const toast = useToast();
 
   const [assets, setAssets] = React.useState<CryptoAsset[] | null>(null);
-  const [holdings, setHoldings] = React.useState<CryptoHoldingRow[] | null>(null);
+  const [holdings, setHoldings] = React.useState<CryptoHoldingRow[] | null>(
+    null,
+  );
   const [tab, setTab] = React.useState<Tab>("buy");
   const [busy, setBusy] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const [buyForm, setBuyForm] = React.useState({ symbol: "", naira: "" });
   const [sellForm, setSellForm] = React.useState({ symbol: "", amount: "" });
-  const [swapForm, setSwapForm] = React.useState({ from: "", to: "", amount: "" });
+  const [swapForm, setSwapForm] = React.useState({
+    from: "",
+    to: "",
+    amount: "",
+  });
   const [limitForm, setLimitForm] = React.useState({
     side: "LIMIT_BUY" as "LIMIT_BUY" | "LIMIT_SELL",
     symbol: "",
@@ -59,13 +66,20 @@ export default function CryptoExchangePage() {
     getAssets().then((a) => {
       setAssets(a);
       setBuyForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
-      setSwapForm((f) => ({ ...f, from: f.from || a[0]?.symbol || "", to: f.to || a[1]?.symbol || "" }));
+      setSwapForm((f) => ({
+        ...f,
+        from: f.from || a[0]?.symbol || "",
+        to: f.to || a[1]?.symbol || "",
+      }));
       setLimitForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
     });
     if (user) {
       getHoldings().then((h) => {
         setHoldings(h);
-        setSellForm((f) => ({ ...f, symbol: f.symbol || h[0]?.assetSymbol || "" }));
+        setSellForm((f) => ({
+          ...f,
+          symbol: f.symbol || h[0]?.assetSymbol || "",
+        }));
       });
     }
   }, [user]);
@@ -75,14 +89,19 @@ export default function CryptoExchangePage() {
   }, [load]);
 
   function priceOf(symbol: string) {
-    return assets?.find((a) => a.symbol === symbol)?.priceUsdCents ?? 0;
+    return assets?.find((a) => a.symbol === symbol)?.priceUsdCents ?? null;
   }
 
   const chartSymbol =
-    (tab === "buy" ? buyForm.symbol
-      : tab === "sell" ? sellForm.symbol
-      : tab === "swap" ? swapForm.from
-      : limitForm.symbol) || assets?.[0]?.symbol || "";
+    (tab === "buy"
+      ? buyForm.symbol
+      : tab === "sell"
+        ? sellForm.symbol
+        : tab === "swap"
+          ? swapForm.from
+          : limitForm.symbol) ||
+    assets?.[0]?.symbol ||
+    "";
 
   async function run<T>(
     action: () => Promise<T>,
@@ -94,11 +113,14 @@ export default function CryptoExchangePage() {
       const result = await action();
       load();
       setOrdersRefreshKey((k) => k + 1);
-      const base = typeof successMsg === "function" ? successMsg(result) : successMsg;
+      const base =
+        typeof successMsg === "function" ? successMsg(result) : successMsg;
       const fee = (result as { feeUsdCents?: number }).feeUsdCents;
       toast(fee ? `${base} Fee: ${usdCentsToStr(fee)}.` : base, "success");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "That didn't go through.");
+      setFormError(
+        err instanceof ApiError ? err.message : "That didn't go through.",
+      );
     } finally {
       setBusy(false);
     }
@@ -125,7 +147,9 @@ export default function CryptoExchangePage() {
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
               <h1 className="text-3xl font-semibold">Exchange</h1>
-              <p className="text-neutral-700 m-0">Buy, sell and swap crypto at live market prices.</p>
+              <p className="text-neutral-700 m-0">
+                Buy, sell and swap crypto at live market prices.
+              </p>
             </div>
 
             {chartSymbol && (
@@ -142,7 +166,10 @@ export default function CryptoExchangePage() {
                 <p className="text-sm text-neutral-700 m-0">
                   Create an account or sign in to buy, sell and swap crypto.
                 </p>
-                <LinkButton href={`/login?next=${encodeURIComponent(pathname ?? "/crypto/exchange")}`} variant="primary">
+                <LinkButton
+                  href={`/login?next=${encodeURIComponent(pathname ?? "/crypto/exchange")}`}
+                  variant="primary"
+                >
                   Sign in
                 </LinkButton>
               </Card>
@@ -151,7 +178,10 @@ export default function CryptoExchangePage() {
                 <Segmented
                   name="exchange-tab"
                   value={tab}
-                  onChange={(v) => { setTab(v); setFormError(null); }}
+                  onChange={(v) => {
+                    setTab(v);
+                    setFormError(null);
+                  }}
                   options={[
                     { value: "buy", label: "Buy" },
                     { value: "sell", label: "Sell" },
@@ -159,7 +189,9 @@ export default function CryptoExchangePage() {
                     { value: "limit", label: "Limit" },
                   ]}
                 />
-                {formError && <div className="text-sm text-error">{formError}</div>}
+                {formError && (
+                  <div className="text-sm text-error">{formError}</div>
+                )}
 
                 {!assets ? (
                   <Skeleton className="h-28 w-full rounded-lg" />
@@ -173,24 +205,42 @@ export default function CryptoExchangePage() {
                         return;
                       }
                       run(
-                        () => buyCrypto({ assetSymbol: buyForm.symbol, nairaAmountCents: cents }),
+                        () =>
+                          buyCrypto({
+                            assetSymbol: buyForm.symbol,
+                            nairaAmountCents: cents,
+                          }),
                         `Bought ${buyForm.symbol}.`,
                       );
                     }}
                     className="flex flex-col gap-3"
                   >
                     <Field label="Asset">
-                      <Select value={buyForm.symbol} onChange={(e) => setBuyForm({ ...buyForm, symbol: e.target.value })}>
+                      <Select
+                        value={buyForm.symbol}
+                        onChange={(e) =>
+                          setBuyForm({ ...buyForm, symbol: e.target.value })
+                        }
+                      >
                         {assetOptions}
                       </Select>
                     </Field>
-                    <Field label="Amount (NGN)" hint={buyForm.symbol ? `Price: ${usdCentsToStr(priceOf(buyForm.symbol))}` : undefined}>
+                    <Field
+                      label="Amount (NGN)"
+                      hint={
+                        buyForm.symbol
+                          ? `Price: ${priceToStr(priceOf(buyForm.symbol))}`
+                          : undefined
+                      }
+                    >
                       <Input
                         type="number"
                         min="0"
                         step="1"
                         value={buyForm.naira}
-                        onChange={(e) => setBuyForm({ ...buyForm, naira: e.target.value })}
+                        onChange={(e) =>
+                          setBuyForm({ ...buyForm, naira: e.target.value })
+                        }
                         placeholder="50000"
                       />
                     </Field>
@@ -208,7 +258,8 @@ export default function CryptoExchangePage() {
                         return;
                       }
                       run(
-                        () => sellCrypto({ assetSymbol: sellForm.symbol, amount }),
+                        () =>
+                          sellCrypto({ assetSymbol: sellForm.symbol, amount }),
                         `Sold ${sellForm.symbol}.`,
                       );
                     }}
@@ -220,7 +271,12 @@ export default function CryptoExchangePage() {
                           <option>No balance to sell</option>
                         </Select>
                       ) : (
-                        <Select value={sellForm.symbol} onChange={(e) => setSellForm({ ...sellForm, symbol: e.target.value })}>
+                        <Select
+                          value={sellForm.symbol}
+                          onChange={(e) =>
+                            setSellForm({ ...sellForm, symbol: e.target.value })
+                          }
+                        >
                           {ownedOptions}
                         </Select>
                       )}
@@ -231,11 +287,16 @@ export default function CryptoExchangePage() {
                         min="0"
                         step="any"
                         value={sellForm.amount}
-                        onChange={(e) => setSellForm({ ...sellForm, amount: e.target.value })}
+                        onChange={(e) =>
+                          setSellForm({ ...sellForm, amount: e.target.value })
+                        }
                         placeholder="0.001"
                       />
                     </Field>
-                    <Button type="submit" disabled={busy || ownedOptions.length === 0}>
+                    <Button
+                      type="submit"
+                      disabled={busy || ownedOptions.length === 0}
+                    >
                       {busy ? "Selling…" : "Sell"}
                     </Button>
                   </form>
@@ -253,7 +314,12 @@ export default function CryptoExchangePage() {
                         return;
                       }
                       run(
-                        () => swapCrypto({ fromSymbol: swapForm.from, toSymbol: swapForm.to, amount }),
+                        () =>
+                          swapCrypto({
+                            fromSymbol: swapForm.from,
+                            toSymbol: swapForm.to,
+                            amount,
+                          }),
                         `Swapped ${swapForm.from} for ${swapForm.to}.`,
                       );
                     }}
@@ -266,13 +332,23 @@ export default function CryptoExchangePage() {
                             <option>No balance</option>
                           </Select>
                         ) : (
-                          <Select value={swapForm.from} onChange={(e) => setSwapForm({ ...swapForm, from: e.target.value })}>
+                          <Select
+                            value={swapForm.from}
+                            onChange={(e) =>
+                              setSwapForm({ ...swapForm, from: e.target.value })
+                            }
+                          >
                             {ownedOptions}
                           </Select>
                         )}
                       </Field>
                       <Field label="To">
-                        <Select value={swapForm.to} onChange={(e) => setSwapForm({ ...swapForm, to: e.target.value })}>
+                        <Select
+                          value={swapForm.to}
+                          onChange={(e) =>
+                            setSwapForm({ ...swapForm, to: e.target.value })
+                          }
+                        >
                           {assetOptions}
                         </Select>
                       </Field>
@@ -283,11 +359,16 @@ export default function CryptoExchangePage() {
                         min="0"
                         step="any"
                         value={swapForm.amount}
-                        onChange={(e) => setSwapForm({ ...swapForm, amount: e.target.value })}
+                        onChange={(e) =>
+                          setSwapForm({ ...swapForm, amount: e.target.value })
+                        }
                         placeholder="0.001"
                       />
                     </Field>
-                    <Button type="submit" disabled={busy || ownedOptions.length === 0}>
+                    <Button
+                      type="submit"
+                      disabled={busy || ownedOptions.length === 0}
+                    >
                       {busy ? "Swapping…" : "Swap"}
                     </Button>
                   </form>
@@ -295,19 +376,29 @@ export default function CryptoExchangePage() {
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      const limitPriceUsdCents = Math.round(Number(limitForm.limitPrice) * 100);
+                      const limitPriceUsdCents = Math.round(
+                        Number(limitForm.limitPrice) * 100,
+                      );
                       if (!limitPriceUsdCents || limitPriceUsdCents <= 0) {
                         setFormError("Enter a valid limit price.");
                         return;
                       }
                       if (limitForm.side === "LIMIT_BUY") {
-                        const nairaAmountCents = Math.round(Number(limitForm.amount) * 100);
+                        const nairaAmountCents = Math.round(
+                          Number(limitForm.amount) * 100,
+                        );
                         if (!nairaAmountCents || nairaAmountCents <= 0) {
                           setFormError("Enter a valid Naira amount.");
                           return;
                         }
                         run(
-                          () => createOrder({ type: "LIMIT_BUY", assetSymbol: limitForm.symbol, limitPriceUsdCents, nairaAmountCents }),
+                          () =>
+                            createOrder({
+                              type: "LIMIT_BUY",
+                              assetSymbol: limitForm.symbol,
+                              limitPriceUsdCents,
+                              nairaAmountCents,
+                            }),
                           `Limit buy order placed for ${limitForm.symbol}.`,
                         );
                       } else {
@@ -317,7 +408,13 @@ export default function CryptoExchangePage() {
                           return;
                         }
                         run(
-                          () => createOrder({ type: "LIMIT_SELL", assetSymbol: limitForm.symbol, limitPriceUsdCents, amount }),
+                          () =>
+                            createOrder({
+                              type: "LIMIT_SELL",
+                              assetSymbol: limitForm.symbol,
+                              limitPriceUsdCents,
+                              amount,
+                            }),
                           `Limit sell order placed for ${limitForm.symbol}.`,
                         );
                       }
@@ -334,42 +431,76 @@ export default function CryptoExchangePage() {
                       ]}
                     />
                     <Field label="Asset">
-                      {limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0 ? (
+                      {limitForm.side === "LIMIT_SELL" &&
+                      ownedOptions.length === 0 ? (
                         <Select disabled>
                           <option>No balance to sell</option>
                         </Select>
                       ) : (
                         <Select
                           value={limitForm.symbol}
-                          onChange={(e) => setLimitForm({ ...limitForm, symbol: e.target.value })}
+                          onChange={(e) =>
+                            setLimitForm({
+                              ...limitForm,
+                              symbol: e.target.value,
+                            })
+                          }
                         >
-                          {limitForm.side === "LIMIT_BUY" ? assetOptions : ownedOptions}
+                          {limitForm.side === "LIMIT_BUY"
+                            ? assetOptions
+                            : ownedOptions}
                         </Select>
                       )}
                     </Field>
-                    <Field label="Limit price (USD)" hint={limitForm.symbol ? `Market: ${usdCentsToStr(priceOf(limitForm.symbol))}` : undefined}>
+                    <Field
+                      label="Limit price (USD)"
+                      hint={
+                        limitForm.symbol
+                          ? `Market: ${priceToStr(priceOf(limitForm.symbol))}`
+                          : undefined
+                      }
+                    >
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
                         value={limitForm.limitPrice}
-                        onChange={(e) => setLimitForm({ ...limitForm, limitPrice: e.target.value })}
+                        onChange={(e) =>
+                          setLimitForm({
+                            ...limitForm,
+                            limitPrice: e.target.value,
+                          })
+                        }
                         placeholder="65000"
                       />
                     </Field>
-                    <Field label={limitForm.side === "LIMIT_BUY" ? "Amount (NGN)" : "Amount"}>
+                    <Field
+                      label={
+                        limitForm.side === "LIMIT_BUY"
+                          ? "Amount (NGN)"
+                          : "Amount"
+                      }
+                    >
                       <Input
                         type="number"
                         min="0"
                         step={limitForm.side === "LIMIT_BUY" ? "1" : "any"}
                         value={limitForm.amount}
-                        onChange={(e) => setLimitForm({ ...limitForm, amount: e.target.value })}
-                        placeholder={limitForm.side === "LIMIT_BUY" ? "50000" : "0.001"}
+                        onChange={(e) =>
+                          setLimitForm({ ...limitForm, amount: e.target.value })
+                        }
+                        placeholder={
+                          limitForm.side === "LIMIT_BUY" ? "50000" : "0.001"
+                        }
                       />
                     </Field>
                     <Button
                       type="submit"
-                      disabled={busy || (limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0)}
+                      disabled={
+                        busy ||
+                        (limitForm.side === "LIMIT_SELL" &&
+                          ownedOptions.length === 0)
+                      }
                     >
                       {busy ? "Placing…" : "Place order"}
                     </Button>
@@ -382,13 +513,22 @@ export default function CryptoExchangePage() {
                 <OpenOrders refreshKey={ordersRefreshKey} />
 
                 <div className="flex gap-4 text-sm pt-1 border-t border-divider">
-                  <Link href="/crypto/send" className="text-accent-700 no-underline font-medium pt-3">
+                  <Link
+                    href="/crypto/send"
+                    className="text-accent-700 no-underline font-medium pt-3"
+                  >
                     Send crypto →
                   </Link>
-                  <Link href="/crypto/receive" className="text-accent-700 no-underline font-medium pt-3">
+                  <Link
+                    href="/crypto/receive"
+                    className="text-accent-700 no-underline font-medium pt-3"
+                  >
                     Receive crypto →
                   </Link>
-                  <Link href="/account/crypto" className="text-accent-700 no-underline font-medium pt-3">
+                  <Link
+                    href="/account/crypto"
+                    className="text-accent-700 no-underline font-medium pt-3"
+                  >
                     Full history →
                   </Link>
                 </div>
@@ -403,14 +543,21 @@ export default function CryptoExchangePage() {
               </div>
               <div className="flex flex-col gap-1">
                 {!assets &&
-                  Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-9 w-full rounded-md" />)}
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-9 w-full rounded-md" />
+                  ))}
                 {assets?.map((a) => (
-                  <div key={a.symbol} className="flex items-center justify-between py-1.5 border-b border-divider last:border-b-0">
+                  <div
+                    key={a.symbol}
+                    className="flex items-center justify-between py-1.5 border-b border-divider last:border-b-0"
+                  >
                     <span className="flex items-center gap-2 text-sm font-semibold">
                       <Icon name="bitcoin" size={14} className="text-accent" />
                       {a.symbol}
                     </span>
-                    <span className="text-sm font-semibold">{usdCentsToStr(a.priceUsdCents)}</span>
+                    <span className="text-sm font-semibold">
+                      {priceToStr(a.priceUsdCents)}
+                    </span>
                   </div>
                 ))}
               </div>

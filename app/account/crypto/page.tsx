@@ -27,6 +27,8 @@ import {
   withdrawCrypto,
   createOrder,
   usdCentsToStr,
+  priceToStr,
+  isFeatureNotAvailable,
   nairaCentsToStr,
   fmtAmount,
   type CryptoAsset,
@@ -49,7 +51,9 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "withdraw", label: "Withdraw" },
 ];
 
-function statusVariant(status: string): "success" | "warning" | "error" | "neutral" {
+function statusVariant(
+  status: string,
+): "success" | "warning" | "error" | "neutral" {
   const s = status.toLowerCase();
   if (s === "completed") return "success";
   if (s === "pending") return "warning";
@@ -68,7 +72,9 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function AccountCryptoPage() {
   const [assets, setAssets] = React.useState<CryptoAsset[] | null>(null);
-  const [holdings, setHoldings] = React.useState<CryptoHoldingRow[] | null>(null);
+  const [holdings, setHoldings] = React.useState<CryptoHoldingRow[] | null>(
+    null,
+  );
   const [txns, setTxns] = React.useState<CryptoTransactionRow[] | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -79,7 +85,11 @@ export default function AccountCryptoPage() {
 
   const [buyForm, setBuyForm] = React.useState({ symbol: "", naira: "" });
   const [sellForm, setSellForm] = React.useState({ symbol: "", amount: "" });
-  const [swapForm, setSwapForm] = React.useState({ from: "", to: "", amount: "" });
+  const [swapForm, setSwapForm] = React.useState({
+    from: "",
+    to: "",
+    amount: "",
+  });
   const [sendForm, setSendForm] = React.useState({
     symbol: "",
     amount: "",
@@ -87,7 +97,10 @@ export default function AccountCryptoPage() {
     toEmail: "",
     toAddress: "",
   });
-  const [withdrawForm, setWithdrawForm] = React.useState({ symbol: "", amount: "" });
+  const [withdrawForm, setWithdrawForm] = React.useState({
+    symbol: "",
+    amount: "",
+  });
   const [limitForm, setLimitForm] = React.useState({
     side: "LIMIT_BUY" as "LIMIT_BUY" | "LIMIT_SELL",
     symbol: "",
@@ -96,7 +109,9 @@ export default function AccountCryptoPage() {
   });
   const [ordersRefreshKey, setOrdersRefreshKey] = React.useState(0);
   const [receiveSymbol, setReceiveSymbol] = React.useState("");
-  const [receiveAddress, setReceiveAddress] = React.useState<string | null>(null);
+  const [receiveAddress, setReceiveAddress] = React.useState<string | null>(
+    null,
+  );
   const [receiveLoading, setReceiveLoading] = React.useState(false);
 
   const load = React.useCallback(() => {
@@ -114,7 +129,10 @@ export default function AccountCryptoPage() {
           to: f.to || a[1]?.symbol || "",
         }));
         setSendForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
-        setWithdrawForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
+        setWithdrawForm((f) => ({
+          ...f,
+          symbol: f.symbol || a[0]?.symbol || "",
+        }));
         setLimitForm((f) => ({ ...f, symbol: f.symbol || a[0]?.symbol || "" }));
         setReceiveSymbol((s) => s || a[0]?.symbol || "");
       })
@@ -130,7 +148,7 @@ export default function AccountCryptoPage() {
   }, [load]);
 
   function priceOf(symbol: string) {
-    return assets?.find((a) => a.symbol === symbol)?.priceUsdCents ?? 0;
+    return assets?.find((a) => a.symbol === symbol)?.priceUsdCents ?? null;
   }
 
   async function run<T>(action: () => Promise<T>, successMsg: string) {
@@ -141,9 +159,14 @@ export default function AccountCryptoPage() {
       load();
       setOrdersRefreshKey((k) => k + 1);
       const fee = (result as { feeUsdCents?: number }).feeUsdCents;
-      toast(fee ? `${successMsg} Fee: ${usdCentsToStr(fee)}.` : successMsg, "success");
+      toast(
+        fee ? `${successMsg} Fee: ${usdCentsToStr(fee)}.` : successMsg,
+        "success",
+      );
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "That didn't go through.");
+      setFormError(
+        err instanceof ApiError ? err.message : "That didn't go through.",
+      );
     } finally {
       setBusy(false);
     }
@@ -156,7 +179,13 @@ export default function AccountCryptoPage() {
       const res = await getReceiveAddress(receiveSymbol);
       setReceiveAddress(res.address);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Couldn't generate an address.");
+      setFormError(
+        isFeatureNotAvailable(err)
+          ? "Receiving crypto isn't available yet."
+          : err instanceof ApiError
+            ? err.message
+            : "Couldn't generate an address.",
+      );
     } finally {
       setReceiveLoading(false);
     }
@@ -175,7 +204,13 @@ export default function AccountCryptoPage() {
     );
   }
   if (error || !assets) {
-    return <EmptyState icon="alert" title="Couldn't load crypto" description={error ?? "Something went wrong."} />;
+    return (
+      <EmptyState
+        icon="alert"
+        title="Couldn't load crypto"
+        description={error ?? "Something went wrong."}
+      />
+    );
   }
 
   const assetOptions = assets.map((a) => (
@@ -201,7 +236,11 @@ export default function AccountCryptoPage() {
       <div>
         <SectionKicker>Your balances</SectionKicker>
         {!holdings || holdings.length === 0 ? (
-          <EmptyState icon="bitcoin" title="No crypto yet" description="Buy your first asset below." />
+          <EmptyState
+            icon="bitcoin"
+            title="No crypto yet"
+            description="Buy your first asset below."
+          />
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {holdings.map((h) => (
@@ -209,7 +248,9 @@ export default function AccountCryptoPage() {
                 <CardKicker>{h.assetSymbol}</CardKicker>
                 <CardTitle>{fmtAmount(h.balance)}</CardTitle>
                 <div className="text-xs text-neutral-600">
-                  {usdCentsToStr(h.valueUsdCents)} · {nairaCentsToStr(h.valueNairaCents)}
+                  {h.valueUsdCents == null || h.valueNairaCents == null
+                    ? "Value unavailable right now"
+                    : `${usdCentsToStr(h.valueUsdCents)} · ${nairaCentsToStr(h.valueNairaCents)}`}
                 </div>
               </Card>
             ))}
@@ -222,13 +263,21 @@ export default function AccountCryptoPage() {
         <div className="bg-card border border-divider rounded-lg p-4">
           <PriceChart
             assetSymbol={
-              (tab === "buy" ? buyForm.symbol
-                : tab === "sell" ? sellForm.symbol
-                : tab === "swap" ? swapForm.from
-                : tab === "limit" ? limitForm.symbol
-                : tab === "send" ? sendForm.symbol
-                : tab === "withdraw" ? withdrawForm.symbol
-                : receiveSymbol) || assets[0]?.symbol || ""
+              (tab === "buy"
+                ? buyForm.symbol
+                : tab === "sell"
+                  ? sellForm.symbol
+                  : tab === "swap"
+                    ? swapForm.from
+                    : tab === "limit"
+                      ? limitForm.symbol
+                      : tab === "send"
+                        ? sendForm.symbol
+                        : tab === "withdraw"
+                          ? withdrawForm.symbol
+                          : receiveSymbol) ||
+              assets[0]?.symbol ||
+              ""
             }
           />
         </div>
@@ -237,7 +286,15 @@ export default function AccountCryptoPage() {
       <div>
         <SectionKicker>Trade</SectionKicker>
         <div className="flex flex-col gap-4 bg-card border border-divider rounded-lg p-4">
-          <Segmented options={TABS} value={tab} onChange={(v) => { setTab(v); setFormError(null); }} name="crypto-tab" />
+          <Segmented
+            options={TABS}
+            value={tab}
+            onChange={(v) => {
+              setTab(v);
+              setFormError(null);
+            }}
+            name="crypto-tab"
+          />
           {formError && <div className="text-sm text-error">{formError}</div>}
 
           {tab === "buy" && (
@@ -250,24 +307,42 @@ export default function AccountCryptoPage() {
                   return;
                 }
                 run(
-                  () => buyCrypto({ assetSymbol: buyForm.symbol, nairaAmountCents: cents }),
+                  () =>
+                    buyCrypto({
+                      assetSymbol: buyForm.symbol,
+                      nairaAmountCents: cents,
+                    }),
                   `Bought ${buyForm.symbol}.`,
                 );
               }}
               className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end"
             >
               <Field label="Asset">
-                <Select value={buyForm.symbol} onChange={(e) => setBuyForm({ ...buyForm, symbol: e.target.value })}>
+                <Select
+                  value={buyForm.symbol}
+                  onChange={(e) =>
+                    setBuyForm({ ...buyForm, symbol: e.target.value })
+                  }
+                >
                   {assetOptions}
                 </Select>
               </Field>
-              <Field label="Amount (NGN)" hint={buyForm.symbol ? `Price: ${usdCentsToStr(priceOf(buyForm.symbol))}` : undefined}>
+              <Field
+                label="Amount (NGN)"
+                hint={
+                  buyForm.symbol
+                    ? `Price: ${priceToStr(priceOf(buyForm.symbol))}`
+                    : undefined
+                }
+              >
                 <Input
                   type="number"
                   min="0"
                   step="1"
                   value={buyForm.naira}
-                  onChange={(e) => setBuyForm({ ...buyForm, naira: e.target.value })}
+                  onChange={(e) =>
+                    setBuyForm({ ...buyForm, naira: e.target.value })
+                  }
                   placeholder="50000"
                 />
               </Field>
@@ -299,7 +374,12 @@ export default function AccountCryptoPage() {
                     <option>No balance to sell</option>
                   </Select>
                 ) : (
-                  <Select value={sellForm.symbol} onChange={(e) => setSellForm({ ...sellForm, symbol: e.target.value })}>
+                  <Select
+                    value={sellForm.symbol}
+                    onChange={(e) =>
+                      setSellForm({ ...sellForm, symbol: e.target.value })
+                    }
+                  >
                     {ownedOptions}
                   </Select>
                 )}
@@ -310,11 +390,16 @@ export default function AccountCryptoPage() {
                   min="0"
                   step="any"
                   value={sellForm.amount}
-                  onChange={(e) => setSellForm({ ...sellForm, amount: e.target.value })}
+                  onChange={(e) =>
+                    setSellForm({ ...sellForm, amount: e.target.value })
+                  }
                   placeholder="0.001"
                 />
               </Field>
-              <Button type="submit" disabled={busy || ownedOptions.length === 0}>
+              <Button
+                type="submit"
+                disabled={busy || ownedOptions.length === 0}
+              >
                 {busy ? "Selling…" : "Sell"}
               </Button>
             </form>
@@ -334,7 +419,12 @@ export default function AccountCryptoPage() {
                   return;
                 }
                 run(
-                  () => swapCrypto({ fromSymbol: swapForm.from, toSymbol: swapForm.to, amount }),
+                  () =>
+                    swapCrypto({
+                      fromSymbol: swapForm.from,
+                      toSymbol: swapForm.to,
+                      amount,
+                    }),
                   `Swapped ${swapForm.from} for ${swapForm.to}.`,
                 );
               }}
@@ -346,13 +436,23 @@ export default function AccountCryptoPage() {
                     <option>No balance</option>
                   </Select>
                 ) : (
-                  <Select value={swapForm.from} onChange={(e) => setSwapForm({ ...swapForm, from: e.target.value })}>
+                  <Select
+                    value={swapForm.from}
+                    onChange={(e) =>
+                      setSwapForm({ ...swapForm, from: e.target.value })
+                    }
+                  >
                     {ownedOptions}
                   </Select>
                 )}
               </Field>
               <Field label="To">
-                <Select value={swapForm.to} onChange={(e) => setSwapForm({ ...swapForm, to: e.target.value })}>
+                <Select
+                  value={swapForm.to}
+                  onChange={(e) =>
+                    setSwapForm({ ...swapForm, to: e.target.value })
+                  }
+                >
                   {assetOptions}
                 </Select>
               </Field>
@@ -362,11 +462,16 @@ export default function AccountCryptoPage() {
                   min="0"
                   step="any"
                   value={swapForm.amount}
-                  onChange={(e) => setSwapForm({ ...swapForm, amount: e.target.value })}
+                  onChange={(e) =>
+                    setSwapForm({ ...swapForm, amount: e.target.value })
+                  }
                   placeholder="0.001"
                 />
               </Field>
-              <Button type="submit" disabled={busy || ownedOptions.length === 0}>
+              <Button
+                type="submit"
+                disabled={busy || ownedOptions.length === 0}
+              >
                 {busy ? "Swapping…" : "Swap"}
               </Button>
             </form>
@@ -376,19 +481,29 @@ export default function AccountCryptoPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                const limitPriceUsdCents = Math.round(Number(limitForm.limitPrice) * 100);
+                const limitPriceUsdCents = Math.round(
+                  Number(limitForm.limitPrice) * 100,
+                );
                 if (!limitPriceUsdCents || limitPriceUsdCents <= 0) {
                   setFormError("Enter a valid limit price.");
                   return;
                 }
                 if (limitForm.side === "LIMIT_BUY") {
-                  const nairaAmountCents = Math.round(Number(limitForm.amount) * 100);
+                  const nairaAmountCents = Math.round(
+                    Number(limitForm.amount) * 100,
+                  );
                   if (!nairaAmountCents || nairaAmountCents <= 0) {
                     setFormError("Enter a valid Naira amount.");
                     return;
                   }
                   run(
-                    () => createOrder({ type: "LIMIT_BUY", assetSymbol: limitForm.symbol, limitPriceUsdCents, nairaAmountCents }),
+                    () =>
+                      createOrder({
+                        type: "LIMIT_BUY",
+                        assetSymbol: limitForm.symbol,
+                        limitPriceUsdCents,
+                        nairaAmountCents,
+                      }),
                     `Limit buy order placed for ${limitForm.symbol}.`,
                   );
                 } else {
@@ -398,7 +513,13 @@ export default function AccountCryptoPage() {
                     return;
                   }
                   run(
-                    () => createOrder({ type: "LIMIT_SELL", assetSymbol: limitForm.symbol, limitPriceUsdCents, amount }),
+                    () =>
+                      createOrder({
+                        type: "LIMIT_SELL",
+                        assetSymbol: limitForm.symbol,
+                        limitPriceUsdCents,
+                        amount,
+                      }),
                     `Limit sell order placed for ${limitForm.symbol}.`,
                   );
                 }
@@ -416,40 +537,68 @@ export default function AccountCryptoPage() {
               />
               <div className="grid gap-3 sm:grid-cols-3 items-end">
                 <Field label="Asset">
-                  {limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0 ? (
+                  {limitForm.side === "LIMIT_SELL" &&
+                  ownedOptions.length === 0 ? (
                     <Select disabled>
                       <option>No balance to sell</option>
                     </Select>
                   ) : (
-                    <Select value={limitForm.symbol} onChange={(e) => setLimitForm({ ...limitForm, symbol: e.target.value })}>
-                      {limitForm.side === "LIMIT_BUY" ? assetOptions : ownedOptions}
+                    <Select
+                      value={limitForm.symbol}
+                      onChange={(e) =>
+                        setLimitForm({ ...limitForm, symbol: e.target.value })
+                      }
+                    >
+                      {limitForm.side === "LIMIT_BUY"
+                        ? assetOptions
+                        : ownedOptions}
                     </Select>
                   )}
                 </Field>
-                <Field label="Limit price (USD)" hint={limitForm.symbol ? `Market: ${usdCentsToStr(priceOf(limitForm.symbol))}` : undefined}>
+                <Field
+                  label="Limit price (USD)"
+                  hint={
+                    limitForm.symbol
+                      ? `Market: ${priceToStr(priceOf(limitForm.symbol))}`
+                      : undefined
+                  }
+                >
                   <Input
                     type="number"
                     min="0"
                     step="0.01"
                     value={limitForm.limitPrice}
-                    onChange={(e) => setLimitForm({ ...limitForm, limitPrice: e.target.value })}
+                    onChange={(e) =>
+                      setLimitForm({ ...limitForm, limitPrice: e.target.value })
+                    }
                     placeholder="65000"
                   />
                 </Field>
-                <Field label={limitForm.side === "LIMIT_BUY" ? "Amount (NGN)" : "Amount"}>
+                <Field
+                  label={
+                    limitForm.side === "LIMIT_BUY" ? "Amount (NGN)" : "Amount"
+                  }
+                >
                   <Input
                     type="number"
                     min="0"
                     step={limitForm.side === "LIMIT_BUY" ? "1" : "any"}
                     value={limitForm.amount}
-                    onChange={(e) => setLimitForm({ ...limitForm, amount: e.target.value })}
-                    placeholder={limitForm.side === "LIMIT_BUY" ? "50000" : "0.001"}
+                    onChange={(e) =>
+                      setLimitForm({ ...limitForm, amount: e.target.value })
+                    }
+                    placeholder={
+                      limitForm.side === "LIMIT_BUY" ? "50000" : "0.001"
+                    }
                   />
                 </Field>
               </div>
               <Button
                 type="submit"
-                disabled={busy || (limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0)}
+                disabled={
+                  busy ||
+                  (limitForm.side === "LIMIT_SELL" && ownedOptions.length === 0)
+                }
                 className="self-end"
               >
                 {busy ? "Placing…" : "Place order"}
@@ -483,7 +632,12 @@ export default function AccountCryptoPage() {
                   return;
                 }
                 run(
-                  () => sendCrypto({ assetSymbol: sendForm.symbol, amount, ...recipient }),
+                  () =>
+                    sendCrypto({
+                      assetSymbol: sendForm.symbol,
+                      amount,
+                      ...recipient,
+                    }),
                   `Sent ${sendForm.symbol}.`,
                 );
               }}
@@ -496,7 +650,12 @@ export default function AccountCryptoPage() {
                       <option>No balance to send</option>
                     </Select>
                   ) : (
-                    <Select value={sendForm.symbol} onChange={(e) => setSendForm({ ...sendForm, symbol: e.target.value })}>
+                    <Select
+                      value={sendForm.symbol}
+                      onChange={(e) =>
+                        setSendForm({ ...sendForm, symbol: e.target.value })
+                      }
+                    >
                       {ownedOptions}
                     </Select>
                   )}
@@ -507,7 +666,9 @@ export default function AccountCryptoPage() {
                     min="0"
                     step="any"
                     value={sendForm.amount}
-                    onChange={(e) => setSendForm({ ...sendForm, amount: e.target.value })}
+                    onChange={(e) =>
+                      setSendForm({ ...sendForm, amount: e.target.value })
+                    }
                     placeholder="0.001"
                   />
                 </Field>
@@ -526,7 +687,9 @@ export default function AccountCryptoPage() {
                   <Input
                     type="email"
                     value={sendForm.toEmail}
-                    onChange={(e) => setSendForm({ ...sendForm, toEmail: e.target.value })}
+                    onChange={(e) =>
+                      setSendForm({ ...sendForm, toEmail: e.target.value })
+                    }
                     placeholder="friend@example.com"
                   />
                 </Field>
@@ -534,12 +697,18 @@ export default function AccountCryptoPage() {
                 <Field label="Recipient address">
                   <Input
                     value={sendForm.toAddress}
-                    onChange={(e) => setSendForm({ ...sendForm, toAddress: e.target.value })}
+                    onChange={(e) =>
+                      setSendForm({ ...sendForm, toAddress: e.target.value })
+                    }
                     placeholder="bc1q…"
                   />
                 </Field>
               )}
-              <Button type="submit" disabled={busy || ownedOptions.length === 0} className="self-end">
+              <Button
+                type="submit"
+                disabled={busy || ownedOptions.length === 0}
+                className="self-end"
+              >
                 {busy ? "Sending…" : "Send"}
               </Button>
             </form>
@@ -549,11 +718,21 @@ export default function AccountCryptoPage() {
             <div className="flex flex-col gap-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
                 <Field label="Asset">
-                  <Select value={receiveSymbol} onChange={(e) => { setReceiveSymbol(e.target.value); setReceiveAddress(null); }}>
+                  <Select
+                    value={receiveSymbol}
+                    onChange={(e) => {
+                      setReceiveSymbol(e.target.value);
+                      setReceiveAddress(null);
+                    }}
+                  >
                     {assetOptions}
                   </Select>
                 </Field>
-                <Button type="button" onClick={handleReceive} disabled={receiveLoading}>
+                <Button
+                  type="button"
+                  onClick={handleReceive}
+                  disabled={receiveLoading}
+                >
                   {receiveLoading ? "Generating…" : "Get address"}
                 </Button>
               </div>
@@ -564,7 +743,9 @@ export default function AccountCryptoPage() {
                   </div>
                   <div className="flex items-center gap-2.5 px-4 py-3 bg-accent-50 border border-accent-200 rounded-lg w-full">
                     <Icon name="wallet" size={16} className="text-accent" />
-                    <code className="text-sm flex-1 break-all">{receiveAddress}</code>
+                    <code className="text-sm flex-1 break-all">
+                      {receiveAddress}
+                    </code>
                   </div>
                 </div>
               )}
@@ -581,19 +762,34 @@ export default function AccountCryptoPage() {
                   return;
                 }
                 run(
-                  () => withdrawCrypto({ assetSymbol: withdrawForm.symbol, amount }),
+                  () =>
+                    withdrawCrypto({
+                      assetSymbol: withdrawForm.symbol,
+                      amount,
+                    }),
                   `Withdrew ${withdrawForm.symbol} to your Naira wallet.`,
                 );
               }}
               className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end"
             >
-              <Field label="Asset" hint="Converts straight to your Naira wallet">
+              <Field
+                label="Asset"
+                hint="Converts straight to your Naira wallet"
+              >
                 {ownedOptions.length === 0 ? (
                   <Select disabled>
                     <option>No balance to withdraw</option>
                   </Select>
                 ) : (
-                  <Select value={withdrawForm.symbol} onChange={(e) => setWithdrawForm({ ...withdrawForm, symbol: e.target.value })}>
+                  <Select
+                    value={withdrawForm.symbol}
+                    onChange={(e) =>
+                      setWithdrawForm({
+                        ...withdrawForm,
+                        symbol: e.target.value,
+                      })
+                    }
+                  >
                     {ownedOptions}
                   </Select>
                 )}
@@ -604,11 +800,16 @@ export default function AccountCryptoPage() {
                   min="0"
                   step="any"
                   value={withdrawForm.amount}
-                  onChange={(e) => setWithdrawForm({ ...withdrawForm, amount: e.target.value })}
+                  onChange={(e) =>
+                    setWithdrawForm({ ...withdrawForm, amount: e.target.value })
+                  }
                   placeholder="0.001"
                 />
               </Field>
-              <Button type="submit" disabled={busy || ownedOptions.length === 0}>
+              <Button
+                type="submit"
+                disabled={busy || ownedOptions.length === 0}
+              >
                 {busy ? "Withdrawing…" : "Withdraw"}
               </Button>
             </form>
