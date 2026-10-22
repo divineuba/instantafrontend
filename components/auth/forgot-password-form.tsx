@@ -2,112 +2,150 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
+import { useSearchParams } from "next/navigation";
+import { Field, fieldDescribedBy } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icon";
+import { LinkButton } from "@/components/ui/button";
 import { IconInput } from "@/components/auth/icon-input";
-import { ApiError } from "@/lib/api";
+import {
+  AUTH_CARD_CLASS,
+  AuthHeading,
+  AuthStatus,
+  FormAlert,
+  SubmitButton,
+  describeAuthError,
+  focusFirstInvalid,
+  useSubmitGuard,
+} from "@/components/auth/auth-ui";
+import { validateEmail } from "@/components/auth/validation";
 import { forgotPassword } from "@/lib/auth";
+import { withNext } from "@/lib/safe-redirect";
 import { useFieldErrors } from "@/lib/use-field-errors";
 
 type ForgotPasswordField = "email";
 
-const CARD =
-  "relative flex flex-col gap-5 p-8 sm:p-9 border border-divider rounded-2xl bg-card shadow-[0_1px_2px_rgba(17,24,39,0.04),0_16px_40px_-20px_rgba(17,24,39,0.14)] w-full max-w-[440px]";
-
+/**
+ * The backend answers this request the same way whether or not the email
+ * has an account (so it can't be used to find out who's registered), and
+ * the confirmation here is worded to match: it never says an account exists.
+ */
 export function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get("next");
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [email, setEmail] = React.useState("");
-  const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [sent, setSent] = React.useState(false);
+  const [sentTo, setSentTo] = React.useState<string | null>(null);
+  const { pending, run } = useSubmitGuard();
   const { errors, setFieldError, validateAll } = useFieldErrors<ForgotPasswordField>();
 
   const validators: Record<ForgotPasswordField, () => string | undefined> = {
-    email: () => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? undefined : "Enter a valid email address"),
+    email: () => validateEmail(email),
   };
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!validateAll(validators)) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await forgotPassword({ email });
-      setSent(true);
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
-    } finally {
-      setSubmitting(false);
+    if (!validateAll(validators)) {
+      requestAnimationFrame(() => focusFirstInvalid(formRef.current));
+      return;
     }
+    void run(async () => {
+      setError(null);
+      try {
+        const trimmed = email.trim();
+        await forgotPassword({ email: trimmed });
+        setSentTo(trimmed);
+      } catch (err) {
+        setError(describeAuthError(err));
+      }
+    });
   }
 
-  if (sent) {
+  if (sentTo) {
     return (
-      <div className={`${CARD} text-center items-center`}>
-        <span className="flex items-center justify-center size-12 rounded-full bg-accent-100 text-accent-700">
-          <Icon name="mail" size={22} />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight m-0 mb-1.5">Check your email</h1>
-          <p className="text-sm text-neutral-600 m-0 leading-relaxed">
-            If an account exists for <strong className="text-text">{email}</strong>, we&apos;ve
-            sent a link to reset your password. The link expires in 1 hour.
-          </p>
-        </div>
-        <Link
-          href="/login"
-          className="text-sm text-accent-700 font-medium hover:text-accent-800 inline-flex items-center gap-1.5"
-        >
-          <Icon name="back" size={14} />
-          Back to log in
-        </Link>
-      </div>
+      <AuthStatus
+        icon="mail"
+        title="Check your email"
+        actions={
+          <>
+            <LinkButton
+              href={withNext("/login", rawNext)}
+              variant="primary"
+              className="min-h-12 text-[15px] w-full"
+            >
+              Back to log in
+            </LinkButton>
+            <button
+              type="button"
+              onClick={() => setSentTo(null)}
+              className="min-h-11 text-sm font-medium text-accent-700 hover:text-accent-800 bg-transparent border-0 cursor-pointer"
+            >
+              Use a different email
+            </button>
+          </>
+        }
+      >
+        <p className="m-0" role="status">
+          If <strong className="text-text break-all">{sentTo}</strong> has an
+          Instanta account, we&apos;ve sent it a link to reset the password.
+          The link works for 1 hour.
+        </p>
+        <p className="m-0 mt-2 text-sm text-neutral-600">
+          Nothing after a few minutes? Check your spam folder, or make sure
+          you typed the email you signed up with.
+        </p>
+      </AuthStatus>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className={CARD}>
-      <div>
-        <h1 className="text-[26px] font-semibold tracking-tight m-0 mb-1.5">Forgot your password?</h1>
-        <p className="text-sm text-neutral-600 m-0">
-          Enter the email on your account and we&apos;ll send you a reset link.
-        </p>
-      </div>
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      noValidate
+      aria-labelledby="forgot-title"
+      className={AUTH_CARD_CLASS}
+    >
+      <AuthHeading id="forgot-title" title="Reset your password">
+        Enter the email you use for Instanta and we&apos;ll send you a link to
+        choose a new password.
+      </AuthHeading>
 
-      <Field label="Email" required htmlFor="email" error={errors.email}>
+      <Field label="Email" htmlFor="email" error={errors.email}>
         <IconInput
           id="email"
+          name="email"
           type="email"
           icon="mail"
+          inputMode="email"
           autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onBlur={() => setFieldError("email", validators.email())}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (errors.email) setFieldError("email", undefined);
+          }}
+          onBlur={() => email && setFieldError("email", validators.email())}
           invalid={!!errors.email}
+          aria-describedby={fieldDescribedBy("email", { error: errors.email })}
         />
       </Field>
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-error/25 bg-error/5 px-3 py-2.5 text-sm text-error">
-          <Icon name="alert" size={15} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <FormAlert message={error} />
 
-      <Button type="submit" disabled={submitting} block className="h-11 text-[15px]">
-        {submitting ? "Sending…" : "Send reset link"}
-      </Button>
+      <SubmitButton pending={pending} pendingLabel="Sending link…">
+        Send reset link
+      </SubmitButton>
 
-      <p className="text-sm text-neutral-600 m-0 text-center">
-        <Link href="/login" className="text-accent-700 font-medium hover:text-accent-800 inline-flex items-center gap-1.5">
-          <Icon name="back" size={14} />
-          Back to log in
-        </Link>
-      </p>
+      <Link
+        href={withNext("/login", rawNext)}
+        className="self-center min-h-11 inline-flex items-center gap-1.5 text-sm text-accent-700 font-semibold hover:text-accent-800"
+      >
+        <Icon name="back" size={15} aria-hidden="true" />
+        Back to log in
+      </Link>
     </form>
   );
 }

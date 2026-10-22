@@ -1,21 +1,23 @@
-import { Header } from "@/components/chrome/header";
-import { Footer } from "@/components/chrome/footer";
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
-export default function ForgotPasswordPage() {
+export const metadata: Metadata = {
+  title: "Reset your password",
+  description: "Get a link to reset your Instanta password.",
+  robots: { index: false, follow: true },
+};
+
+export default function Page() {
   return (
-    <>
-      <Header business="group" />
-      <main className="flex-1 flex">
-        <AuthShell
-          heading="It happens to everyone"
-          blurb="We'll email you a secure link to get back into your account."
-        >
-          <ForgotPasswordForm />
-        </AuthShell>
-      </main>
-      <Footer />
-    </>
+    <AuthShell
+      heading="Locked out? It happens."
+      blurb="We'll email you a link to choose a new password. It works for one hour."
+    >
+      <Suspense fallback={null}>
+        <ForgotPasswordForm />
+      </Suspense>
+    </AuthShell>
   );
 }

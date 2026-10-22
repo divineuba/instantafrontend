@@ -1,148 +1,187 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { Icon } from "@/components/ui/icon";
-import { PasswordInput, PasswordStrengthMeter } from "@/components/auth/password-input";
+import { useSearchParams } from "next/navigation";
+import { Field, fieldDescribedBy } from "@/components/ui/field";
+import { LinkButton } from "@/components/ui/button";
+import {
+  PASSWORD_MIN_LENGTH,
+  PasswordInput,
+  PasswordStrengthMeter,
+} from "@/components/auth/password-input";
+import {
+  AUTH_CARD_CLASS,
+  AuthHeading,
+  AuthStatus,
+  FormAlert,
+  SubmitButton,
+  describeAuthError,
+  focusFirstInvalid,
+  useSubmitGuard,
+} from "@/components/auth/auth-ui";
 import { ApiError } from "@/lib/api";
 import { resetPassword } from "@/lib/auth";
 import { useFieldErrors } from "@/lib/use-field-errors";
 
 type ResetPasswordField = "password" | "confirmPassword";
 
-const CARD =
-  "relative flex flex-col gap-5 p-8 sm:p-9 border border-divider rounded-2xl bg-card shadow-[0_1px_2px_rgba(17,24,39,0.04),0_16px_40px_-20px_rgba(17,24,39,0.14)] w-full max-w-[440px]";
-
 export function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [linkExpired, setLinkExpired] = React.useState(false);
   const [done, setDone] = React.useState(false);
+  const { pending, run } = useSubmitGuard();
   const { errors, setFieldError, validateAll } = useFieldErrors<ResetPasswordField>();
 
   const validators: Record<ResetPasswordField, () => string | undefined> = {
-    password: () => (password.length >= 8 ? undefined : "Password must be at least 8 characters"),
-    confirmPassword: () => (confirmPassword === password ? undefined : "Passwords don't match"),
+    password: () =>
+      password.length >= PASSWORD_MIN_LENGTH
+        ? undefined
+        : `Use at least ${PASSWORD_MIN_LENGTH} characters`,
+    confirmPassword: () =>
+      !confirmPassword
+        ? "Type the new password again"
+        : confirmPassword === password
+          ? undefined
+          : "The passwords don't match",
   };
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!validateAll(validators)) return;
     if (!token) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await resetPassword({ token, password });
-      setDone(true);
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
-    } finally {
-      setSubmitting(false);
+    if (!validateAll(validators)) {
+      requestAnimationFrame(() => focusFirstInvalid(formRef.current));
+      return;
     }
+    void run(async () => {
+      setError(null);
+      try {
+        await resetPassword({ token, password });
+        setDone(true);
+      } catch (err) {
+        // A 400 here means the token is unknown, used or past its hour.
+        setLinkExpired(err instanceof ApiError && err.status === 400);
+        setError(describeAuthError(err));
+      }
+    });
   }
 
   if (!token) {
     return (
-      <div className={`${CARD} text-center items-center`}>
-        <span className="flex items-center justify-center size-12 rounded-full bg-error/10 text-error">
-          <Icon name="alert" size={22} />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight m-0 mb-1.5">Invalid reset link</h1>
-          <p className="text-sm text-neutral-600 m-0">
-            This link is missing its reset token. Request a new one below.
-          </p>
-        </div>
-        <Link href="/forgot-password" className="text-sm text-accent-700 font-medium hover:text-accent-800">
-          Request a new link
-        </Link>
-      </div>
+      <AuthStatus
+        icon="alert"
+        tone="error"
+        title="This reset link is incomplete"
+        actions={
+          <LinkButton
+            href="/forgot-password"
+            variant="primary"
+            className="min-h-12 text-[15px] w-full"
+          >
+            Request a new link
+          </LinkButton>
+        }
+      >
+        <p className="m-0">
+          The link is missing part of its code. Open it straight from the
+          email, or request a new one.
+        </p>
+      </AuthStatus>
     );
   }
 
   if (done) {
     return (
-      <div className={`${CARD} text-center items-center`}>
-        <span className="flex items-center justify-center size-12 rounded-full bg-accent-100 text-accent-700">
-          <Icon name="check" size={22} />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight m-0 mb-1.5">Password reset</h1>
-          <p className="text-sm text-neutral-600 m-0 leading-relaxed">
-            Your password has been updated. You&apos;ve been signed out of every device for
-            your security &mdash; log in again with your new password.
-          </p>
-        </div>
-        <Button onClick={() => router.push("/login")} block className="h-11 text-[15px]">
-          Log in
-        </Button>
-      </div>
+      <AuthStatus
+        icon="check"
+        tone="success"
+        title="Password changed"
+        actions={
+          <LinkButton href="/login" variant="primary" className="min-h-12 text-[15px] w-full">
+            Log in with your new password
+          </LinkButton>
+        }
+      >
+        <p className="m-0" role="status">
+          For your security we&apos;ve signed you out on every device. Log in
+          again with your new password.
+        </p>
+      </AuthStatus>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className={CARD}>
-      <div>
-        <h1 className="text-[26px] font-semibold tracking-tight m-0 mb-1.5">Reset your password</h1>
-        <p className="text-sm text-neutral-600 m-0">Choose a new password for your account.</p>
-      </div>
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      noValidate
+      aria-labelledby="reset-title"
+      className={AUTH_CARD_CLASS}
+    >
+      <AuthHeading id="reset-title" title="Choose a new password">
+        Pick one you don&apos;t use anywhere else.
+      </AuthHeading>
 
       <div className="flex flex-col gap-4">
-        <Field
-          label="New password"
-          required
-          htmlFor="password"
-          hint={password ? undefined : "At least 8 characters"}
-          error={errors.password}
-        >
+        <Field label="New password" htmlFor="password" error={errors.password}>
           <PasswordInput
             id="password"
+            name="password"
             autoComplete="new-password"
+            required
+            minLength={PASSWORD_MIN_LENGTH}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onBlur={() => setFieldError("password", validators.password())}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password && e.target.value.length >= PASSWORD_MIN_LENGTH) {
+                setFieldError("password", undefined);
+              }
+            }}
             invalid={!!errors.password}
+            aria-describedby={
+              errors.password ? "password-error password-rules" : "password-rules"
+            }
           />
-          <PasswordStrengthMeter password={password} />
+          <PasswordStrengthMeter id="password-rules" password={password} />
         </Field>
-        <Field
-          label="Confirm password"
-          required
-          htmlFor="confirmPassword"
-          error={errors.confirmPassword}
-        >
+        <Field label="Confirm new password" htmlFor="confirmPassword" error={errors.confirmPassword}>
           <PasswordInput
             id="confirmPassword"
+            name="confirmPassword"
             autoComplete="new-password"
+            required
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            onBlur={() => setFieldError("confirmPassword", validators.confirmPassword())}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (errors.confirmPassword) setFieldError("confirmPassword", undefined);
+            }}
+            onBlur={() =>
+              confirmPassword && setFieldError("confirmPassword", validators.confirmPassword())
+            }
             invalid={!!errors.confirmPassword}
+            aria-describedby={fieldDescribedBy("confirmPassword", {
+              error: errors.confirmPassword,
+            })}
           />
         </Field>
       </div>
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-error/25 bg-error/5 px-3 py-2.5 text-sm text-error">
-          <Icon name="alert" size={15} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <FormAlert message={error}>
+        {linkExpired && (
+          <Link href="/forgot-password" className="font-semibold text-inherit underline">
+            Request a new reset link
+          </Link>
+        )}
+      </FormAlert>
 
-      <Button type="submit" disabled={submitting} block className="h-11 text-[15px]">
-        {submitting ? "Resetting…" : "Reset password"}
-      </Button>
+      <SubmitButton pending={pending} pendingLabel="Saving…">
+        Save new password
+      </SubmitButton>
     </form>
   );
 }
