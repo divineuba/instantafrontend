@@ -194,7 +194,7 @@ function ResultsBody() {
               ? "Searching…"
               : error
                 ? "Search failed"
-                : `${data?.resultCount ?? 0} flights · prices are per adult, ${tripTypeLabel(tripType)}, including taxes`}
+                : `${data?.resultCount ?? 0} flights · prices are the total for ${adults} adult${adults > 1 ? "s" : ""}, ${tripTypeLabel(tripType)}, including taxes`}
           </div>
 
           {!loading && error && (

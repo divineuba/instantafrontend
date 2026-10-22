@@ -75,7 +75,9 @@ export default function TripsPage() {
       dob: p.dob,
       gender: p.gender,
       nationality: p.nationality,
-      passportNumber: p.passportNumber,
+      // The server only ever sends a masked number; leave the field blank so
+      // the stored one is kept unless the traveler types a new one.
+      passportNumber: "",
       passportCountry: p.passportCountry,
       passportExpiry: p.passportExpiry,
     });
@@ -89,7 +91,8 @@ export default function TripsPage() {
     setFormError(null);
     try {
       if (editingId) {
-        await updatePassenger(editingId, form);
+        const { passportNumber, ...rest } = form;
+        await updatePassenger(editingId, passportNumber.trim() ? form : rest);
         toast("Passenger updated.", "success");
       } else {
         await addPassenger(form);
@@ -119,6 +122,8 @@ export default function TripsPage() {
       setDeletingId(null);
     }
   }
+
+  const editingPassenger = editingId ? data?.passengers.find((p) => p.id === editingId) : undefined;
 
   if (loading) {
     return (
@@ -273,9 +278,17 @@ export default function TripsPage() {
                   onChange={(e) => setForm({ ...form, nationality: e.target.value })}
                 />
               </Field>
-              <Field label="Passport number" required>
+              <Field
+                label="Passport number"
+                required={!editingPassenger}
+                hint={
+                  editingPassenger
+                    ? `On file${editingPassenger.passportLast4 ? ` •••• ${editingPassenger.passportLast4}` : ""}. Leave blank to keep it.`
+                    : undefined
+                }
+              >
                 <Input
-                  required
+                  required={!editingPassenger}
                   value={form.passportNumber}
                   onChange={(e) => setForm({ ...form, passportNumber: e.target.value })}
                 />

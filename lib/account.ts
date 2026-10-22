@@ -14,6 +14,8 @@ export interface AccountOverview {
     date: string;
     flightNo: string;
     depart: string;
+    /** ISO time of the first leg's departure, or null when unknown. */
+    departAt: string | null;
   } | null;
   activeDelivery: {
     trackingId: string;
@@ -42,6 +44,11 @@ export interface ActivityRow {
   date: string;
   amount: string;
   status: string;
+  /** Record ids for linking; only the one matching the row's vertical is set. */
+  deliveryId?: string;
+  bookingId?: string;
+  paymentId?: string;
+  transactionId?: string;
 }
 
 export function getOverview() {
@@ -68,7 +75,10 @@ export interface SavedPassenger {
   dob: string;
   gender: string;
   nationality: string;
+  /** Always masked by the server, e.g. "•••• 1234". Never send it back. */
   passportNumber: string;
+  /** Last four characters of the stored number, or null when it's too short to show. */
+  passportLast4: string | null;
   passportCountry: string;
   passportExpiry: string;
   createdAt: string;
@@ -95,6 +105,7 @@ export interface TripsResponse {
     flightNo: string;
     aircraft: string;
     returnDate: string;
+    departAt: string | null;
   } | null;
   past: { bookingId: string; route: string; date: string; amount: string }[];
   documents: { name: string; meta: string; bookingId: string }[];
@@ -229,7 +240,8 @@ export interface ProfileResponse {
   defaultAddress: string | null;
   currency: string;
   createdAt: string;
-  sessions: { id: string; createdAt: string; expiresAt: string }[];
+  /** Newest first; `current` marks the session this request was made with. */
+  sessions: { id: string; createdAt: string; expiresAt: string; current: boolean }[];
 }
 
 export function getProfile() {
@@ -258,6 +270,13 @@ export function updateProfile(input: {
 
 export function revokeSession(id: string) {
   return apiFetch<{ ok: true }>(`/account/sessions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+/** Signs out every session except the one making this request. */
+export function revokeOtherSessions() {
+  return apiFetch<{ ok: true; revoked: number }>("/account/sessions/others", {
     method: "DELETE",
   });
 }

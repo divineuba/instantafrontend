@@ -45,9 +45,11 @@ export default async function TravelsDetailPage({
   // Without a live confirmation only the search price is known, and it is
   // shown as such: no breakdown, and booking re-confirms it.
   const total = priced?.price ?? Number(offer.price);
-  const serviceFee = 12;
-  const baseFare = Math.round((total - serviceFee) * 0.76 * 100) / 100;
-  const taxes = Math.round((total - baseFare - serviceFee) * 100) / 100;
+  // Each part is shown only when the airline itemised it; nothing is estimated.
+  const baseFare = priced?.base ?? null;
+  const taxes = priced?.taxes ?? null;
+  const fees = priced?.fees ?? null;
+  const hasBreakdown = baseFare !== null || taxes !== null || (fees !== null && fees > 0);
 
   const firstLeg = offer.legs[0];
   const lastLeg = offer.legs[offer.legs.length - 1];
@@ -141,16 +143,23 @@ export default async function TravelsDetailPage({
                 <span className="text-neutral-700">
                   {adults} adult{adults > 1 ? "s" : ""} · {offer.fareLabel}
                 </span>
-                <span>{fmtUsd(baseFare)}</span>
+                {baseFare !== null && <span>{fmtUsd(baseFare)}</span>}
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-700">Taxes and charges</span>
-                <span>{fmtUsd(taxes)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-700">Instanta service fee</span>
-                <span>{fmtUsd(serviceFee)}</span>
-              </div>
+              {taxes !== null && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-700">Taxes and charges</span>
+                  <span>{fmtUsd(taxes)}</span>
+                </div>
+              )}
+              {fees !== null && fees > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-700">Fees</span>
+                  <span>{fmtUsd(fees)}</span>
+                </div>
+              )}
+              {!hasBreakdown && (
+                <p className="text-xs text-neutral-600 m-0">The airline didn&apos;t itemise this fare.</p>
+              )}
             </>
           ) : (
             <p className="text-sm text-neutral-700 m-0">

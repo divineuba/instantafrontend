@@ -21,6 +21,9 @@ import { useFieldErrors } from "@/lib/use-field-errors";
 
 interface PassengerFormState {
   savedPassengerId?: string;
+  // The saved passenger's passport stays on the server; we only show its last
+  // characters, and a blank number field means "use the one on file".
+  savedPassportLast4?: string | null;
   title: "Mr" | "Ms" | "Mx";
   firstName: string;
   lastName: string;
@@ -78,7 +81,8 @@ export function PassengerForm({
       [`${i}.firstName`]: () => (p.firstName.trim() ? undefined : "First name is required"),
       [`${i}.lastName`]: () => (p.lastName.trim() ? undefined : "Last name is required"),
       [`${i}.dob`]: () => (p.dob ? undefined : "Date of birth is required"),
-      [`${i}.passportNumber`]: () => (p.passportNumber.trim() ? undefined : "Passport number is required"),
+      [`${i}.passportNumber`]: () =>
+        p.passportNumber.trim() || p.savedPassengerId ? undefined : "Passport number is required",
       [`${i}.passportExpiry`]: () => (p.passportExpiry ? undefined : "Expiry date is required"),
     } as Record<FieldKey, () => string | undefined>;
   }
@@ -105,7 +109,8 @@ export function PassengerForm({
               dob: p.dob,
               gender: p.gender === "Female" ? "Female" : "Male",
               nationality: p.nationality,
-              passportNumber: p.passportNumber,
+              passportNumber: "",
+              savedPassportLast4: p.passportLast4,
               passportCountry: p.passportCountry,
               passportExpiry: p.passportExpiry,
             }
@@ -119,7 +124,9 @@ export function PassengerForm({
   }
 
   const canSubmit = Boolean(
-    passengers.every((p) => p.firstName && p.lastName && p.dob && p.passportNumber && p.passportExpiry) &&
+    passengers.every(
+      (p) => p.firstName && p.lastName && p.dob && (p.passportNumber || p.savedPassengerId) && p.passportExpiry,
+    ) &&
       contactEmail &&
       contactPhone,
   );
@@ -140,7 +147,7 @@ export function PassengerForm({
           dob: p.dob,
           gender: p.gender,
           nationality: p.nationality,
-          passportNumber: p.passportNumber,
+          passportNumber: p.passportNumber.trim() || undefined,
           passportCountry: p.passportCountry,
           passportExpiry: p.passportExpiry,
         })),
@@ -265,9 +272,19 @@ export function PassengerForm({
             <div className="pt-4 border-t border-divider flex flex-col gap-3.5">
               <span className="text-sm font-medium">Passport · required for international flights</span>
               <div className="grid sm:grid-cols-3 gap-4">
-                <Field label="Passport number" required error={errors[`${i}.passportNumber`]}>
+                <Field
+                  label="Passport number"
+                  required={!p.savedPassengerId}
+                  hint={
+                    p.savedPassengerId
+                      ? `On file${p.savedPassportLast4 ? ` •••• ${p.savedPassportLast4}` : ""}. Leave blank to use it.`
+                      : undefined
+                  }
+                  error={errors[`${i}.passportNumber`]}
+                >
                   <Input
                     value={p.passportNumber}
+                    placeholder={p.savedPassengerId ? "Use the number on file" : undefined}
                     onChange={(e) => set(i, "passportNumber", e.target.value)}
                     onBlur={() => setFieldError(`${i}.passportNumber`, validatorsFor(i)[`${i}.passportNumber`]())}
                     invalid={!!errors[`${i}.passportNumber`]}

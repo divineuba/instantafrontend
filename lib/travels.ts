@@ -135,6 +135,10 @@ export function getOffer(id: string) {
 export interface ConfirmedFlightPrice {
   price: number;
   currency: string;
+  /** Fare breakdown as the airline returned it; null when a part wasn't provided. */
+  base: number | null;
+  taxes: number | null;
+  fees: number | null;
   fareRules: string[];
 }
 
@@ -177,7 +181,8 @@ export interface PassengerInput {
   dob: string;
   gender: "Male" | "Female";
   nationality: string;
-  passportNumber: string;
+  /** Required unless savedPassengerId is set; the server then uses the number on file. */
+  passportNumber?: string;
   passportCountry: string;
   passportExpiry: string;
 }

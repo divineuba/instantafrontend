@@ -11,7 +11,7 @@ import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/lib/toast-context";
 import { ApiError } from "@/lib/api";
-import { getProfile, updateProfile, revokeSession, type ProfileResponse } from "@/lib/account";
+import { getProfile, updateProfile, revokeSession, revokeOtherSessions, type ProfileResponse } from "@/lib/account";
 import { useFieldErrors } from "@/lib/use-field-errors";
 
 type ProfileField = "firstName" | "lastName";
@@ -29,6 +29,7 @@ export default function ProfilePage() {
   });
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [revokingOthers, setRevokingOthers] = React.useState(false);
   const { errors, setFieldError, validateAll } = useFieldErrors<ProfileField>();
   const toast = useToast();
 
@@ -81,6 +82,19 @@ export default function ProfilePage() {
     await revokeSession(id);
     load();
     toast("Session revoked.", "success");
+  }
+
+  async function handleRevokeOthers() {
+    setRevokingOthers(true);
+    try {
+      const { revoked } = await revokeOtherSessions();
+      load();
+      toast(revoked === 1 ? "Signed out 1 other device." : `Signed out ${revoked} other devices.`, "success");
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : "Couldn't sign out your other devices.", "error");
+    } finally {
+      setRevokingOthers(false);
+    }
   }
 
   if (loading) {
@@ -161,18 +175,27 @@ export default function ProfilePage() {
             <div key={s.id} className="flex items-center gap-3 px-4 py-3 bg-card border border-divider rounded-lg">
               <Icon name="shield" size={16} />
               <span className="flex-1">
-                <span className="block text-sm font-medium">Session</span>
+                <span className="block text-sm font-medium">{s.current ? "This device" : "Session"}</span>
                 <span className="block text-xs text-neutral-600">
                   Created {new Date(s.createdAt).toLocaleString()} · Expires{" "}
                   {new Date(s.expiresAt).toLocaleString()}
                 </span>
               </span>
-              <Button variant="secondary" onClick={() => handleRevoke(s.id)}>
-                Revoke
-              </Button>
+              {!s.current && (
+                <Button variant="secondary" onClick={() => handleRevoke(s.id)}>
+                  Revoke
+                </Button>
+              )}
             </div>
           ))}
         </div>
+        {profile.sessions.some((s) => s.current) && profile.sessions.some((s) => !s.current) && (
+          <div className="flex justify-end mt-2">
+            <Button variant="secondary" onClick={handleRevokeOthers} disabled={revokingOthers}>
+              {revokingOthers ? "Signing out…" : "Sign out all other devices"}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div>
