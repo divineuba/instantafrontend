@@ -19,7 +19,7 @@ const SECTIONS = [
   },
   {
     title: "Your choices",
-    body: "You can review and update your profile at any time from your account settings, and you can request a copy or deletion of your data by contacting support.",
+    body: "You can review and update your profile at any time from your account settings, and you can request a copy of your data by contacting support. To delete your account and its data, use the Delete your account page linked at the bottom of every page, or the delete option in your account settings.",
   },
   {
     title: "Contact",

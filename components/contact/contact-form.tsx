@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea, fieldDescribedBy } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ApiError } from "@/lib/api";
@@ -82,9 +82,9 @@ export function ContactForm({
         <span className="flex items-center justify-center size-12 rounded-full bg-accent-100 text-accent-700">
           <Icon name="check" size={24} />
         </span>
-        <div className="text-xl font-semibold">Message sent.</div>
+        <div className="text-xl font-semibold" role="status">Message sent.</div>
         <p className="text-sm text-neutral-700 max-w-sm m-0">
-          We&apos;ve got it &mdash; our team replies within one business day, by email.
+          We&apos;ve got it. Our team will reply by email.
         </p>
       </div>
     );
@@ -92,8 +92,12 @@ export function ContactForm({
 
   return (
     <form onSubmit={onSubmit} className="grid sm:grid-cols-2 gap-4">
-      <Field label="Your name" required error={errors.name}>
+      <Field label="Your name" htmlFor="contact-name" required error={errors.name}>
         <Input
+          id="contact-name"
+          name="name"
+          autoComplete="name"
+          aria-describedby={fieldDescribedBy("contact-name", { error: errors.name })}
           placeholder="Ada Okafor"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -101,9 +105,16 @@ export function ContactForm({
           invalid={!!errors.name}
         />
       </Field>
-      <Field label="Email" required error={errors.email}>
+      <Field label="Email" htmlFor="contact-email" required error={errors.email}>
         <Input
+          id="contact-email"
+          name="email"
           type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          aria-describedby={fieldDescribedBy("contact-email", { error: errors.email })}
           placeholder="you@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -112,8 +123,8 @@ export function ContactForm({
         />
       </Field>
       {allowTopicChange && (
-        <Field label="Topic" required className="sm:col-span-2">
-          <Select value={topic} onChange={(e) => setTopic(e.target.value as ContactTopic)}>
+        <Field label="Topic" htmlFor="contact-topic" required className="sm:col-span-2">
+          <Select id="contact-topic" name="topic" value={topic} onChange={(e) => setTopic(e.target.value as ContactTopic)}>
             {Object.entries(TOPIC_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -122,8 +133,11 @@ export function ContactForm({
           </Select>
         </Field>
       )}
-      <Field label="Subject" required error={errors.subject} className="sm:col-span-2">
+      <Field label="Subject" htmlFor="contact-subject" required error={errors.subject} className="sm:col-span-2">
         <Input
+          id="contact-subject"
+          name="subject"
+          aria-describedby={fieldDescribedBy("contact-subject", { error: errors.subject })}
           placeholder="What's this about?"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
@@ -131,8 +145,12 @@ export function ContactForm({
           invalid={!!errors.subject}
         />
       </Field>
-      <Field label="Message" required error={errors.message} className="sm:col-span-2">
+      <Field label="Message" htmlFor="contact-message" required error={errors.message} className="sm:col-span-2">
         <Textarea
+          id="contact-message"
+          name="message"
+          aria-invalid={!!errors.message || undefined}
+          aria-describedby={fieldDescribedBy("contact-message", { error: errors.message })}
           placeholder="Tell us what's going on..."
           rows={5}
           value={message}
@@ -142,13 +160,16 @@ export function ContactForm({
         />
       </Field>
 
-      {status === "error" && <p className="sm:col-span-2 text-sm text-error m-0">{error}</p>}
+      <p className="sm:col-span-2 text-sm text-error m-0 empty:hidden" role="alert">
+        {status === "error" ? error : null}
+      </p>
 
       <Button
         type="submit"
         variant="primary"
-        className="sm:col-span-2 h-10"
+        className="sm:col-span-2 min-h-11"
         disabled={status === "submitting"}
+        aria-busy={status === "submitting" || undefined}
       >
         {status === "submitting" ? "Sending…" : submitLabel}
       </Button>

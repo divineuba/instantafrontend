@@ -8,25 +8,27 @@ import { SectionKicker } from "@/components/ui/section-kicker";
 import { ContactSalesForm } from "@/components/business/contact-sales-form";
 import { FadeInWhenVisible } from "@/components/motion/fade-in-when-visible";
 
+// What a business workspace does today (backend workspaces module and the
+// account workspace screens). Keep this list to shipped features.
 const SOLUTIONS: { icon: IconName; title: string; body: string }[] = [
-  { icon: "truck", title: "Corporate logistics", body: "Dedicated riders, scheduled routes and delivery SLAs." },
-  { icon: "plane", title: "Corporate travel", body: "Travel policy, approvals and negotiated fares." },
-  { icon: "briefcase", title: "Business accounts", body: "One workspace for every team and cost centre." },
-  { icon: "layers", title: "Bulk services", body: "Upload hundreds of deliveries or group bookings at once." },
-  { icon: "chat", title: "Dedicated support", body: "A named account manager and priority line." },
+  { icon: "users", title: "Team roles", body: "Owners, admins and members, each with the right level of access." },
+  { icon: "mail", title: "Email invites", body: "Invite colleagues by email and assign them a cost centre." },
+  { icon: "wallet", title: "Monthly limits", body: "Set how much each member can spend in a month." },
+  { icon: "check", title: "Approvals", body: "Requests go to an admin to approve or decline before they go ahead." },
+  { icon: "file", title: "Statements and reports", body: "See team orders, billing statements and spend in one place." },
 ];
 
 const STEPS = [
-  { n: "01", title: "Create your workspace", body: "Add company details and invite your team." },
-  { n: "02", title: "Set roles and limits", body: "Decide who can book, who approves and what they can spend." },
-  { n: "03", title: "Book across services", body: "Deliveries and trips land on one dashboard and one invoice." },
+  { n: "01", title: "Create your Instanta account", body: "Or log in if you already have one." },
+  { n: "02", title: "Add a business workspace", body: "Name your company from your account and you become its owner." },
+  { n: "03", title: "Invite your team and set limits", body: "Choose roles, cost centres and monthly limits for each person." },
 ];
 
 export default function BusinessPage() {
   return (
     <>
       <Header business="group" />
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         {/* Hero */}
         <section className="ins-container pt-16 grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-14 items-center">
           <FadeInWhenVisible className="flex flex-col gap-5" y={16}>
@@ -34,18 +36,22 @@ export default function BusinessPage() {
               Instanta for Business
             </Tag>
             <h1 className="text-[clamp(36px,4.8vw,64px)] leading-[1.05]">
-              Move goods. Move people. One invoice.
+              Your whole team on one Instanta workspace.
             </h1>
             <p className="text-lg text-neutral-700 max-w-lg">
-              A business account gives your company corporate logistics,
-              corporate travel and consolidated billing, with roles and
-              approvals for every team.
+              Add a business workspace to your Instanta account to give your
+              team access, set spending limits and approve requests, with
+              statements for everything the team orders.
             </p>
             <div className="flex gap-3 flex-wrap">
-              <LinkButton href="/account" variant="primary" className="text-base px-6 py-3">
-                Open a business account
+              <LinkButton
+                href={`/register?next=${encodeURIComponent("/account")}`}
+                variant="primary"
+                className="min-h-12 text-base px-6"
+              >
+                Get started
               </LinkButton>
-              <LinkButton href="#contact" variant="secondary" className="text-base px-6 py-3">
+              <LinkButton href="#contact" variant="secondary" className="min-h-12 text-base px-6">
                 Talk to sales
               </LinkButton>
             </div>
@@ -62,7 +68,7 @@ export default function BusinessPage() {
           <FadeInWhenVisible>
             <SectionKicker>Solutions</SectionKicker>
             <h2 className="text-[clamp(28px,3.2vw,40px)] leading-tight max-w-xl mb-8">
-              A dedicated solution for every part of the business.
+              The controls a growing team needs.
             </h2>
           </FadeInWhenVisible>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
@@ -72,22 +78,22 @@ export default function BusinessPage() {
                 delay={oi * 0.06}
                 className="flex flex-col gap-3 rounded-lg border border-divider bg-card p-5"
               >
-                <span className="flex items-center justify-center size-10 rounded-md bg-accent-100 text-accent-800">
+                <span className="flex items-center justify-center size-10 rounded-md bg-accent-100 text-accent-800" aria-hidden="true">
                   <Icon name={o.icon} size={20} />
                 </span>
-                <div className="text-base font-semibold">{o.title}</div>
+                <h3 className="text-base font-semibold m-0">{o.title}</h3>
                 <p className="text-sm text-neutral-700 m-0">{o.body}</p>
               </FadeInWhenVisible>
             ))}
           </div>
         </section>
 
-        {/* Live in a day */}
+        {/* How it works */}
         <section className="ins-container pt-24 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-14">
           <FadeInWhenVisible>
             <SectionKicker>How it works</SectionKicker>
             <h2 className="text-[clamp(28px,3.2vw,44px)] leading-tight">
-              Live in a day.
+              Set up from your account.
             </h2>
           </FadeInWhenVisible>
           <div className="flex flex-col">
@@ -97,11 +103,11 @@ export default function BusinessPage() {
                 delay={si * 0.08}
                 className="grid grid-cols-[56px_minmax(0,1fr)] sm:grid-cols-[72px_minmax(0,1fr)] gap-5 py-5 border-t border-divider"
               >
-                <span className="text-[32px] sm:text-[40px] font-semibold text-accent leading-none">
+                <span className="text-[32px] sm:text-[40px] font-semibold text-accent leading-none" aria-hidden="true">
                   {s.n}
                 </span>
                 <div>
-                  <div className="text-xl font-semibold">{s.title}</div>
+                  <h3 className="text-xl font-semibold m-0">{s.title}</h3>
                   <p className="text-sm text-neutral-700 mt-1 mb-0">{s.body}</p>
                 </div>
               </FadeInWhenVisible>
@@ -117,8 +123,8 @@ export default function BusinessPage() {
                 Talk to our business team
               </h2>
               <p className="text-sm text-neutral-700 m-0">
-                Tell us what you move and where your people travel. We reply
-                within one business day.
+                Tell us what your team needs and we&apos;ll get back to you by
+                email.
               </p>
             </div>
             <ContactSalesForm />

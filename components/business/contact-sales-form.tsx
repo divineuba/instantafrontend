@@ -54,9 +54,9 @@ export function ContactSalesForm() {
         <span className="flex items-center justify-center size-12 rounded-full bg-accent-100 text-accent-700">
           <Icon name="check" size={24} />
         </span>
-        <div className="text-xl font-semibold">Thanks we&apos;ll be in touch.</div>
+        <div className="text-xl font-semibold">Thanks, we&apos;ll be in touch.</div>
         <p className="text-sm text-neutral-700 max-w-sm m-0">
-          Our business team replies within one business day with next steps
+          Our business team will reply by email with next steps
           for setting up your workspace.
         </p>
       </div>

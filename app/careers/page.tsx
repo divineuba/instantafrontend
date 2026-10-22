@@ -11,7 +11,7 @@ const VALUES: { icon: IconName; title: string; body: string }[] = [
   {
     icon: "zap",
     title: "Move fast",
-    body: "We ship in days, not quarters, across logistics and travel at the same time.",
+    body: "We ship in small steps, across four services at once.",
   },
   {
     icon: "users",
@@ -21,7 +21,7 @@ const VALUES: { icon: IconName; title: string; body: string }[] = [
   {
     icon: "globe",
     title: "Built for the region",
-    body: "We design for Lagos, Abuja, Accra and Nairobi first, not as an afterthought.",
+    body: "We design for how people in Nigeria actually send, travel, pay and meet, first.",
   },
 ];
 
@@ -29,7 +29,7 @@ export default function CareersPage() {
   return (
     <>
       <Header business="group" />
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         {/* Hero */}
         <section className="ins-container pt-16 grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-14 items-center">
           <FadeInWhenVisible>
@@ -48,7 +48,7 @@ export default function CareersPage() {
             <LinkButton
               href="/contact"
               variant="primary"
-              className="text-base px-6 py-3 mt-6"
+              className="min-h-12 text-base px-6 mt-6"
             >
               Get in touch
             </LinkButton>
@@ -67,10 +67,10 @@ export default function CareersPage() {
             {VALUES.map((v, i) => (
               <FadeInWhenVisible key={v.title} delay={i * 0.06}>
                 <div className="flex flex-col gap-3">
-                  <span className="flex items-center justify-center size-11 rounded-full bg-accent-100 text-accent-700">
+                  <span className="flex items-center justify-center size-11 rounded-full bg-accent-100 text-accent-700" aria-hidden="true">
                     <Icon name={v.icon} size={22} />
                   </span>
-                  <div className="text-xl font-semibold">{v.title}</div>
+                  <h2 className="text-xl font-semibold m-0 font-sans">{v.title}</h2>
                   <p className="text-sm text-neutral-700 m-0">{v.body}</p>
                 </div>
               </FadeInWhenVisible>
