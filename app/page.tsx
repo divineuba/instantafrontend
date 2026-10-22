@@ -1,335 +1,337 @@
-import { Suspense, type ReactNode } from "react";
-import { Scene } from "@/components/illustrations/scene";
+import Link from "next/link";
 import { Header } from "@/components/chrome/header";
 import { Footer } from "@/components/chrome/footer";
-import { LinkButton } from "@/components/ui/button";
-import { Tag } from "@/components/ui/tag";
+import { buttonVariants } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ServiceSelector } from "@/components/home/service-selector";
 import { SectionKicker } from "@/components/ui/section-kicker";
-import { AnimatedCounter } from "@/components/motion/animated-counter";
 import { businesses } from "@/lib/businesses.config";
-import { getPublicStats } from "@/lib/stats";
-import { FadeInWhenVisible } from "@/components/motion/fade-in-when-visible";
+import { cn } from "@/lib/cn";
 
-const CITIES = ["Lagos", "Abuja", "Accra", "Nairobi"];
+/**
+ * What each service actually does today. Every line here maps to a feature
+ * in the product (see the backend modules named in the comments), so keep
+ * it that way when editing: no claims the code can't back up.
+ */
+const SERVICE_DETAIL: Record<string, { summary: string; features: string[] }> = {
+  // delivery: quote endpoint, live tracking gateway, delivery messages
+  logistics: {
+    summary: "Send a package across town and follow it to the door.",
+    features: [
+      "See the price before you book",
+      "Follow your rider live on a map",
+      "Message your rider from the app",
+    ],
+  },
+  // flights + bookings: search, PRICE_CHANGED check, trips in account
+  travels: {
+    summary: "Search flights, compare fares and book in a few steps.",
+    features: [
+      "Compare flights side by side",
+      "Fare checked again before you pay",
+      "Every trip saved in your account",
+    ],
+  },
+  // crypto: six assets, market pricing, NGN rate for cash-out
+  crypto: {
+    summary: "Buy, sell and swap major coins, and cash out in Naira.",
+    features: [
+      "Bitcoin, Ethereum, USDT, USDC, BNB and Solana",
+      "Prices from the live market",
+      "Send and receive with your own wallet address",
+    ],
+  },
+  // dating: matches gate chat, block + report
+  love: {
+    summary: "Meet new people and talk once the interest is mutual.",
+    features: [
+      "Chat opens only when you both match",
+      "Block or report anyone, any time",
+      "Discover profiles, then like or pass",
+    ],
+  },
+};
 
-const WHY: { n: string; icon: IconName; title: string; body: string }[] = [
+const TRUST: { icon: IconName; title: string; body: string }[] = [
   {
-    n: "01",
-    icon: "shield",
-    title: "One trusted group",
-    body: "Every service is run and backed by Instanta Group.",
+    icon: "grid",
+    title: "One sign-in for everything",
+    body: "The same email and password open Logistics, Travels, Crypto and Love. One profile, one place to manage it.",
   },
   {
-    n: "02",
-    icon: "clock",
-    title: "Built for convenience",
-    body: "Book, pay and track in a few steps, on any device.",
+    icon: "tag",
+    title: "Prices before you commit",
+    body: "Deliveries are quoted before you book. Flight fares are checked again at payment, and if a fare moved we ask before charging.",
   },
   {
-    n: "03",
-    icon: "cpu",
-    title: "Technology driven",
-    body: "Live tracking, instant pricing and digital tickets.",
+    icon: "lock",
+    title: "Your account stays yours",
+    body: "Sessions live in secure cookies, and resetting your password signs you out of every other device.",
   },
   {
-    n: "04",
     icon: "chat",
-    title: "Customer first",
-    body: "Real people on hand around the clock.",
+    title: "Help from inside your account",
+    body: "Open a support ticket from your account and keep the whole conversation in one thread.",
   },
-  {
-    n: "05",
-    icon: "layers",
-    title: "Built to scale",
-    body: "From one parcel to a company-wide account.",
-  },
-];
-
-const METRIC_CELL_CLASS =
-  "p-7 flex flex-col gap-1.5 border-b sm:border-b-0 lg:border-r border-divider last:border-b-0 lg:last:border-r-0";
-
-function MetricCell({ value, label }: { value: ReactNode; label: string }) {
-  return (
-    <div className={METRIC_CELL_CLASS}>
-      <div className="font-semibold text-[clamp(32px,3.6vw,48px)] leading-none text-accent-700 whitespace-nowrap">
-        {value}
-      </div>
-      <div className="text-sm text-neutral-700">{label}</div>
-    </div>
-  );
-}
-
-function MetricsSkeleton() {
-  return (
-    <>
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className={METRIC_CELL_CLASS}>
-          <Skeleton className="h-10 w-20" />
-          <Skeleton variant="text" className="w-28" />
-        </div>
-      ))}
-    </>
-  );
-}
-
-async function HomeMetrics() {
-  const stats = await getPublicStats();
-  return (
-    <>
-      <MetricCell value={<AnimatedCounter value={stats.customersServed} suffix="+" />} label="Customers served" />
-      <MetricCell
-        value={<AnimatedCounter value={stats.successfulDeliveries} suffix="+" />}
-        label="Successful deliveries"
-      />
-      <MetricCell value={<AnimatedCounter value={stats.citiesServed} />} label="Cities served" />
-      <MetricCell value="24/7" label="Customer support" />
-    </>
-  );
-}
-
-const BIZ_OFFERS: { icon: IconName; title: string; body: string }[] = [
-  { icon: "truck", title: "Corporate logistics", body: "Scheduled and bulk deliveries with SLAs." },
-  { icon: "plane", title: "Corporate travel", body: "Staff flights with policies and approvals." },
-  { icon: "users", title: "Team accounts", body: "Roles, spend limits and cost centres." },
-  { icon: "file", title: "One monthly invoice", body: "Every service on a single statement." },
-];
-
-const FUTURE: { icon: IconName; label: string }[] = [
-  { icon: "wallet", label: "Payments" },
-  { icon: "bed", label: "Hotels" },
-  { icon: "car", label: "Car rentals" },
-  { icon: "cart", label: "Procurement" },
-  { icon: "cpu", label: "Technology services" },
 ];
 
 export default function Home() {
   return (
     <>
       <Header business="group" />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="ins-container pt-16 grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] gap-14 items-end">
-          <FadeInWhenVisible className="flex flex-col gap-6 pb-2" y={16}>
-            <div className="flex gap-2 flex-wrap">
-              <Tag variant="outline">Instanta Group</Tag>
-              <Tag variant="neutral">Logistics</Tag>
-              <Tag variant="neutral">Travels</Tag>
-              <Tag
-                variant="neutral"
-                className="border border-dashed border-divider bg-transparent"
-              >
-                + More soon
-              </Tag>
-            </div>
-            <h1 className="font-script text-[clamp(40px,6vw,80px)] leading-[1.05] text-neutral-900">
-              One group.{" "}
-              <span className="mark-highlight">Many ways to move forward.</span>
-            </h1>
-            <p className="text-lg leading-relaxed max-w-xl text-neutral-700">
-              We bring together trusted services across logistics, travel and
-              more helping individuals and businesses get where they need
-              to go.
+      <main id="main" className="flex-1">
+        {/* 1. What Instanta is */}
+        <section
+          aria-labelledby="hero-title"
+          className="ins-container pt-10 sm:pt-16 lg:pt-20 grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-12 lg:gap-16 items-center"
+        >
+          <div className="flex flex-col gap-6">
+            <p className="m-0 inline-flex items-center gap-2 self-start rounded-full bg-accent-100 px-3 py-1.5 text-[13px] font-semibold text-accent-800">
+              <span className="flex -space-x-1" aria-hidden="true">
+                {businesses.map((b) => (
+                  <span
+                    key={b.id}
+                    className={cn("size-2.5 rounded-full ring-2 ring-accent-100 bg-space", `space-${b.id}`)}
+                  />
+                ))}
+              </span>
+              One account, four services
             </p>
-            <div className="flex gap-3 flex-wrap">
-              <LinkButton href="/services" variant="primary" className="text-base px-6 py-3">
-                Explore our services
-              </LinkButton>
-              <LinkButton href="/account" variant="secondary" className="text-base px-6 py-3">
-                Get started
-              </LinkButton>
-            </div>
-          </FadeInWhenVisible>
-          <FadeInWhenVisible delay={0.1} y={16}>
-            <figure className="relative aspect-[5/4] rounded-lg overflow-hidden border border-divider">
-              <Scene variant="horizon" className="absolute inset-0" />
-            </figure>
-          </FadeInWhenVisible>
-        </section>
-
-        {/* Service selector */}
-        <FadeInWhenVisible className="ins-container mt-12">
-          <ServiceSelector />
-        </FadeInWhenVisible>
-
-        {/* Our businesses */}
-        <section id="services" className="ins-container pt-28">
-          <FadeInWhenVisible className="flex justify-between items-end mb-8 gap-6 flex-wrap">
-            <div>
-              <SectionKicker>01 Our businesses</SectionKicker>
-              <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-xl">
-                Four businesses today. Built for many more.
-              </h2>
-            </div>
-            <LinkButton href="/services" variant="ghost">
-              See every service <Icon name="arrow" size={14} />
-            </LinkButton>
-          </FadeInWhenVisible>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {businesses.map((b, bi) => (
-              <FadeInWhenVisible key={b.id} delay={bi * 0.08}>
-                <article className="rounded-lg border border-divider bg-card overflow-hidden flex flex-col">
-                  <div className="aspect-[16/7] border-b border-divider relative">
-                    <Scene
-                      variant={
-                        b.id === "logistics"
-                          ? "delivery"
-                          : b.id === "travels"
-                            ? "travel"
-                            : b.id === "crypto"
-                              ? "crypto"
-                              : b.id === "love"
-                                ? "love"
-                                : "travel"
-                      }
-                      className="absolute inset-0"
-                    />
-                  </div>
-                  <div className="p-7 flex flex-col gap-4 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-[11px] tracking-[.14em] uppercase text-accent-700 font-semibold">
-                        <Icon name={b.icon} size={18} /> {b.name}
-                      </span>
-                    </div>
-                    <h3 className="text-[32px] leading-[1.05]">{b.tagline}</h3>
-                    <p className="text-[15px] text-neutral-700 max-w-md">
-                      {b.id === "logistics"
-                        ? "Reliable delivery and logistics services designed for individuals and businesses."
-                        : b.id === "travels"
-                          ? "Flight booking and travel services designed to make every trip easier."
-                          : b.id === "crypto"
-                            ? "Buy, sell, swap and send crypto with live prices and instant Naira withdrawal."
-                            : "Meet people nearby, match, and start chatting in one app."}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {b.megaItems.slice(0, 4).map((m) => (
-                        <Tag key={m.label} variant="accent">
-                          {m.label}
-                        </Tag>
-                      ))}
-                    </div>
-                    <div className="flex gap-2.5 mt-2">
-                      <LinkButton href={b.cta.href} variant="primary">
-                        {b.cta.label}
-                      </LinkButton>
-                      <LinkButton href={b.href} variant="secondary">
-                        Explore {b.name.toLowerCase()}
-                      </LinkButton>
-                    </div>
-                  </div>
-                </article>
-              </FadeInWhenVisible>
-            ))}
-          </div>
-
-          <FadeInWhenVisible
-            className="mt-6 border border-dashed border-divider rounded-xl px-7 py-5 flex items-center gap-7 flex-wrap"
-            delay={0.15}
-          >
-            <span className="font-semibold text-lg">Next on the platform</span>
-            <div className="flex gap-6 flex-wrap mr-auto text-sm text-neutral-700">
-              {FUTURE.map((f) => (
-                <span key={f.label} className="flex items-center gap-1.5">
-                  <Icon name={f.icon} size={16} /> {f.label}
-                </span>
-              ))}
-            </div>
-            <Tag variant="neutral">Coming soon</Tag>
-          </FadeInWhenVisible>
-
-          <div className="mt-10 flex items-center gap-3 text-sm text-neutral-600">
-            <Icon name="pin" size={15} className="text-accent shrink-0" />
-            <span>
-              Already live in{" "}
-              {CITIES.map((c, i) => (
-                <span key={c}>
-                  <span className="font-medium text-neutral-800">{c}</span>
-                  {i < CITIES.length - 1 ? ", " : ""}
-                </span>
-              ))}
-              {" "}— with more cities on the way as each business expands.
-            </span>
-          </div>
-        </section>
-
-        {/* Why Instanta */}
-        <section className="ins-container pt-28">
-          <FadeInWhenVisible>
-            <SectionKicker>02 Why Instanta</SectionKicker>
-            <h2 className="text-[clamp(32px,3.6vw,48px)] leading-tight max-w-2xl mb-8">
-              Every service, one standard.
-            </h2>
-          </FadeInWhenVisible>
-          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
-            {WHY.map((w, wi) => (
-              <FadeInWhenVisible key={w.n} delay={wi * 0.06} className="flex flex-col gap-3 relative">
-                <span className="font-script text-[44px] leading-none text-neutral-200 absolute -top-3 right-0 select-none pointer-events-none">
-                  {w.n}
-                </span>
-                <Icon name={w.icon} size={28} className="text-accent" />
-                <div className="text-xl font-semibold">{w.title}</div>
-                <p className="text-sm text-neutral-700 m-0">{w.body}</p>
-              </FadeInWhenVisible>
-            ))}
-          </div>
-        </section>
-
-        {/* Metrics */}
-        <section className="ins-container pt-28">
-          <FadeInWhenVisible className="rounded-lg border border-divider overflow-hidden grid sm:grid-cols-2 lg:grid-cols-[280px_repeat(4,minmax(0,1fr))]">
-            <div className="p-7 border-b sm:border-b-0 sm:border-r border-divider flex flex-col justify-between gap-5">
-              <SectionKicker>03 In numbers</SectionKicker>
-            </div>
-            <Suspense fallback={<MetricsSkeleton />}>
-              <HomeMetrics />
-            </Suspense>
-          </FadeInWhenVisible>
-        </section>
-
-        {/* For Business */}
-        <section className="ins-container pt-28 pb-28">
-          <FadeInWhenVisible className="rounded-xl bg-accent-900 text-white grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-12 p-6 sm:p-10 lg:p-12">
-            <div className="flex flex-col gap-4">
-              <div className="text-[11px] tracking-[.14em] uppercase text-accent-300 font-semibold">
-                04 Instanta for Business
-              </div>
-              <h2 className="text-[clamp(28px,3.2vw,42px)] leading-tight">
-                Company deliveries and staff travel, on one account.
-              </h2>
-              <p className="text-accent-200 max-w-md">
-                One workspace for your team, consolidated monthly billing and
-                reports across every Instanta service.
-              </p>
-              <div className="flex gap-2.5 flex-wrap mt-2">
-                <LinkButton href="/business" variant="inverse">
-                  Explore business solutions
-                </LinkButton>
-                <LinkButton href="/account" variant="inverse-ghost">
-                  View workspace demo
-                </LinkButton>
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {BIZ_OFFERS.map((o) => (
-                <div
-                  key={o.title}
-                  className="p-5 rounded-lg bg-white/10 flex gap-3.5"
+            <h1
+              id="hero-title"
+              className="m-0 text-[clamp(36px,6.4vw,68px)] leading-[1.04] tracking-tight text-neutral-900"
+            >
+              Deliveries, flights, crypto and dates.{" "}
+              <span className="font-script text-accent font-normal text-[1.12em] leading-none">
+                All in one place.
+              </span>
+            </h1>
+            <p className="m-0 text-lg leading-relaxed max-w-xl text-neutral-700">
+              Instanta brings Logistics, Travels, Crypto and Love together
+              behind a single sign-in, built for everyday life in Nigeria.
+            </p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+              <Link
+                href="/register"
+                className={cn(buttonVariants({ variant: "primary" }), "min-h-12 px-6 text-base")}
+              >
+                Create your account
+                <Icon name="arrow" size={16} aria-hidden="true" />
+              </Link>
+              <p className="m-0 text-[15px] text-neutral-700">
+                Already with us?{" "}
+                <Link
+                  href="/login"
+                  className="inline-flex min-h-11 items-center font-semibold text-accent-700 hover:text-accent-800"
                 >
-                  <Icon name={o.icon} size={20} className="text-accent-300 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-semibold text-base">{o.title}</div>
-                    <div className="text-[13px] text-accent-200">{o.body}</div>
-                  </div>
-                </div>
-              ))}
+                  Log in
+                </Link>
+              </p>
             </div>
-          </FadeInWhenVisible>
+          </div>
+
+          <HeroTiles />
+        </section>
+
+        {/* 2. The four services */}
+        <section aria-labelledby="services-title" className="ins-container pt-24 sm:pt-28">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+            <div>
+              <SectionKicker>The services</SectionKicker>
+              <h2
+                id="services-title"
+                className="m-0 text-[clamp(28px,3.6vw,44px)] leading-tight max-w-xl"
+              >
+                Four services. One sign-in.
+              </h2>
+            </div>
+            <Link
+              href="/services"
+              className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-accent-700 hover:text-accent-800"
+            >
+              Browse every service <Icon name="arrow" size={14} aria-hidden="true" />
+            </Link>
+          </div>
+
+          <ul className="grid md:grid-cols-2 gap-5 m-0 p-0 list-none">
+            {businesses.map((b) => {
+              const detail = SERVICE_DETAIL[b.id];
+              return (
+                <li key={b.id} className={`space-${b.id}`}>
+                    <article className="h-full rounded-2xl border border-divider bg-card overflow-hidden flex flex-col">
+                      <div className="relative h-2 bg-space" aria-hidden="true" />
+                      <div className="p-6 sm:p-7 flex flex-col gap-4 flex-1">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="grid place-items-center size-11 rounded-xl bg-space-soft text-space-ink"
+                            aria-hidden="true"
+                          >
+                            <Icon name={b.icon} size={22} />
+                          </span>
+                          <div>
+                            <h3 className="m-0 text-[22px] leading-tight">
+                              {b.label.replace("Instanta ", "")}
+                            </h3>
+                            <p className="m-0 text-sm text-space-ink font-medium">{b.tagline}</p>
+                          </div>
+                        </div>
+                        <p className="m-0 text-[15px] text-neutral-700">{detail?.summary}</p>
+                        <ul className="m-0 p-0 list-none flex flex-col gap-2">
+                          {detail?.features.map((f) => (
+                            <li key={f} className="flex items-start gap-2.5 text-[15px] text-neutral-800">
+                              <Icon
+                                name="check"
+                                size={16}
+                                className="text-space shrink-0 mt-[3px]"
+                                aria-hidden="true"
+                              />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-auto pt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                          <Link
+                            href={b.cta.href}
+                            className={cn(
+                              buttonVariants({ variant: "primary" }),
+                              "min-h-11 bg-space border-space hover:bg-space-ink hover:border-space-ink",
+                            )}
+                          >
+                            {b.cta.label}
+                          </Link>
+                          <Link
+                            href={b.href}
+                            className="inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-space-ink hover:underline underline-offset-4"
+                          >
+                            About {b.label.replace("Instanta ", "")}
+                            <Icon name="arrow" size={14} aria-hidden="true" />
+                          </Link>
+                        </div>
+                      </div>
+                    </article>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* 3. Why trust it */}
+        <section aria-labelledby="trust-title" className="ins-container pt-24 sm:pt-28">
+          <div className="grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-10 lg:gap-16">
+            <div>
+              <SectionKicker>Why Instanta</SectionKicker>
+              <h2 id="trust-title" className="m-0 text-[clamp(28px,3.6vw,44px)] leading-tight">
+                Built so you always know where you stand.
+              </h2>
+              <p className="mt-4 mb-0 text-[15px] text-neutral-700 max-w-md">
+                No fine print in these: each one is how the product works
+                today.
+              </p>
+            </div>
+            <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-9 m-0 p-0 list-none">
+              {TRUST.map((t) => (
+                <li key={t.title} className="flex flex-col gap-2.5">
+                  <span
+                    className="grid place-items-center size-10 rounded-xl bg-accent-100 text-accent-700"
+                    aria-hidden="true"
+                  >
+                    <Icon name={t.icon} size={19} />
+                  </span>
+                  <h3 className="m-0 text-lg">{t.title}</h3>
+                  <p className="m-0 text-[15px] text-neutral-700 leading-relaxed">{t.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Business, kept short */}
+        <section aria-labelledby="biz-title" className="ins-container pt-24 sm:pt-28">
+          <div className="rounded-2xl border border-divider bg-neutral-100/60 p-6 sm:p-8 flex flex-col md:flex-row md:items-center gap-5 md:gap-10">
+            <span
+              className="grid place-items-center size-12 rounded-xl bg-white text-accent-700 border border-divider shrink-0"
+              aria-hidden="true"
+            >
+              <Icon name="briefcase" size={22} />
+            </span>
+            <div className="flex-1">
+              <h2 id="biz-title" className="m-0 text-[22px] leading-tight">
+                Running a team?
+              </h2>
+              <p className="mt-1.5 mb-0 text-[15px] text-neutral-700 max-w-2xl">
+                Business workspaces add team roles, monthly spending limits,
+                approvals and invoices on top of your Instanta account.
+              </p>
+            </div>
+            <Link
+              href="/business"
+              className={cn(buttonVariants({ variant: "secondary" }), "min-h-11 self-start md:self-auto")}
+            >
+              Instanta for Business
+            </Link>
+          </div>
+        </section>
+
+        {/* 4. One clear call to action */}
+        <section aria-labelledby="cta-title" className="ins-container pt-24 sm:pt-28">
+          <div className="relative overflow-hidden rounded-3xl bg-accent-900 text-white px-6 py-12 sm:px-12 sm:py-16 text-center">
+            <div
+              className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 size-96 rounded-full bg-accent/40 blur-[100px]"
+              aria-hidden="true"
+            />
+            <div className="relative flex flex-col items-center gap-5">
+              <h2 id="cta-title" className="m-0 text-[clamp(28px,4vw,46px)] leading-tight max-w-2xl">
+                One account. Everything Instanta.
+              </h2>
+              <p className="m-0 text-[17px] text-accent-200 max-w-lg">
+                Sign up once and the same account works for deliveries,
+                flights, crypto and dating.
+              </p>
+              <Link
+                href="/register"
+                className={cn(buttonVariants({ variant: "inverse" }), "min-h-12 px-7 text-base mt-1")}
+              >
+                Create your account
+              </Link>
+            </div>
+          </div>
         </section>
       </main>
       <Footer />
     </>
+  );
+}
+
+/** Decorative: the four services as a loose stack of tiles. */
+function HeroTiles() {
+  return (
+    <div aria-hidden="true" className="relative isolate">
+      <div
+        className="absolute inset-6 -z-10 rounded-[2.5rem] bg-accent-100 rotate-[-3deg] motion-reduce:rotate-0"
+      />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-[520px] mx-auto lg:mx-0 lg:ml-auto">
+        {businesses.map((b, i) => (
+          <div
+            key={b.id}
+            className={cn(
+              "rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-6 sm:gap-10 min-h-[132px] sm:min-h-[176px] text-white bg-space shadow-[0_18px_40px_-24px_rgba(17,24,39,0.55)]",
+              `space-${b.id}`,
+              i % 2 === 0 && "lg:translate-y-6",
+            )}
+          >
+            <span className="grid place-items-center size-10 sm:size-12 rounded-xl bg-white/15 ring-1 ring-white/25">
+              <Icon name={b.icon} size={22} />
+            </span>
+            <span>
+              <span className="block text-[17px] sm:text-xl font-semibold font-heading leading-tight">
+                {b.label.replace("Instanta ", "")}
+              </span>
+              <span className="block text-[13px] sm:text-sm text-white/85 leading-snug mt-1">
+                {b.tagline}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

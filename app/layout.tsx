@@ -26,20 +26,23 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
-  title: "Instanta One group. Many ways to move forward.",
+  title: {
+    default: "Instanta: deliveries, travel, crypto and dating in one account",
+    template: "%s | Instanta",
+  },
   description:
-    "Instanta Group runs Instanta Logistics and Instanta Travels from one account, one workspace, one platform.",
+    "Send packages, book flights, trade crypto and meet people with one Instanta account. Logistics, Travels, Crypto and Love, built for Nigeria.",
   openGraph: {
     title: "Instanta",
     description:
-      "Instanta Group runs Instanta Logistics and Instanta Travels from one account, one workspace, one platform.",
+      "Send packages, book flights, trade crypto and meet people with one Instanta account. Logistics, Travels, Crypto and Love, built for Nigeria.",
     images: ["/brand/mark-1024.png"],
   },
   twitter: {
     card: "summary",
     title: "Instanta",
     description:
-      "Instanta Group runs Instanta Logistics and Instanta Travels from one account, one workspace, one platform.",
+      "Send packages, book flights, trade crypto and meet people with one Instanta account. Logistics, Travels, Crypto and Love, built for Nigeria.",
     images: ["/brand/mark-1024.png"],
   },
 };
