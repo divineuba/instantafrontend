@@ -209,7 +209,8 @@ export function changedFare(err: unknown): number | null {
 export type BookingStatus = "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED";
 export type TripType = "ONE_WAY" | "ROUND_TRIP" | "MULTI_CITY";
 export type PaymentMethodKey = "CARD" | "WALLET" | "BANK_TRANSFER" | "BUSINESS";
-export type PaymentStatusKey = "SUCCESS" | "FAILED";
+export type PaymentProviderKey = "BACHS" | "FLUTTERWAVE" | "STRIPE";
+export type PaymentStatusKey = "PENDING" | "SUCCESS" | "FAILED";
 export type TravelDocumentStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type RefundRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -220,6 +221,11 @@ export interface Payment {
   status: PaymentStatusKey;
   amount: string;
   cardLast4: string | null;
+  /** CARD only: which hosted checkout, its session id, and the URL to
+   * redirect the customer to. */
+  provider: PaymentProviderKey | null;
+  providerReference: string | null;
+  checkoutUrl: string | null;
   createdAt: string;
 }
 
@@ -308,7 +314,8 @@ export function getBooking(id: string, accessKey?: string) {
 
 export interface PayBookingRequest {
   method: PaymentMethodKey;
-  cardNumber?: string;
+  /** CARD only. Which hosted checkout to use; defaults to BACHS. */
+  provider?: PaymentProviderKey;
 }
 
 export interface PayBookingResponse {
