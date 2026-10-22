@@ -36,6 +36,24 @@ export interface DatingProfile {
   updatedAt: string;
 }
 
+/// Someone else's profile as Discover returns it: an age rather than a birth
+/// date, and no location beyond the city.
+export interface DiscoverProfile {
+  id: string;
+  userId: string;
+  displayName: string;
+  age: number;
+  city: string;
+  bio: string;
+  interests: string[];
+  photos: { id: string; url: string; position: number }[];
+}
+
+/// The server's caps (UpsertDatingProfileDto).
+export const DISPLAY_NAME_MAX = 40;
+export const CITY_MAX = 80;
+export const BIO_MAX = 500;
+
 export interface CreateDatingProfileInput {
   displayName: string;
   bio: string;
@@ -49,7 +67,15 @@ export interface CreateDatingProfileInput {
   maxDistanceKm?: number;
 }
 
-export type UpdateDatingProfileInput = Partial<CreateDatingProfileInput> & { isActive?: boolean };
+/// The preferences take null to clear them.
+export type UpdateDatingProfileInput = Partial<
+  Omit<CreateDatingProfileInput, "minAgePref" | "maxAgePref" | "maxDistanceKm">
+> & {
+  minAgePref?: number | null;
+  maxAgePref?: number | null;
+  maxDistanceKm?: number | null;
+  isActive?: boolean;
+};
 
 export type SwipeDirection = "LIKE" | "PASS" | "SUPERLIKE";
 
@@ -58,7 +84,7 @@ export type SwipeResult =
   | { matched: true; matchId: string; otherUserId: string };
 
 export interface DiscoverResult {
-  profiles: DatingProfile[];
+  profiles: DiscoverProfile[];
   nextCursor: string | null;
 }
 
@@ -92,6 +118,8 @@ export interface DatingBlock {
   blockerId: string;
   blockedId: string;
   createdAt: string;
+  /** The blocked person's public name; null if they no longer have a profile. */
+  displayName: string | null;
 }
 
 export interface DatingReport {
@@ -129,7 +157,8 @@ export function presignPhotoUpload(contentType: string) {
   });
 }
 
-export function addPhoto(input: { key: string; url: string }) {
+/// The server builds the photo URL from the presigned key.
+export function addPhoto(input: { key: string }) {
   return apiFetch<DatingPhoto>("/dating/profile/photos", {
     method: "POST",
     body: JSON.stringify(input),

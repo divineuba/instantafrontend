@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Icon } from "@/components/ui/icon";
-import { ageFromBirthdate, type DatingProfile } from "@/lib/dating";
+import type { DiscoverProfile } from "@/lib/dating";
 
 function initials(name: string) {
   return name
@@ -15,7 +15,7 @@ export function SwipeCard({
   profile,
   className,
 }: {
-  profile: DatingProfile;
+  profile: DiscoverProfile;
   className?: string;
 }) {
   const photo = profile.photos[0]?.url;
@@ -35,7 +35,7 @@ export function SwipeCard({
       <div className="flex flex-col gap-2 p-5">
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-semibold">{profile.displayName}</span>
-          <span className="text-neutral-600 text-lg">{ageFromBirthdate(profile.birthdate)}</span>
+          <span className="text-neutral-600 text-lg">{profile.age}</span>
         </div>
         <span className="flex items-center gap-1.5 text-sm text-neutral-600">
           <Icon name="pin" size={14} />

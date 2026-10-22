@@ -23,6 +23,9 @@ import {
   listBlocks,
   unblockUser,
   ageFromBirthdate,
+  BIO_MAX,
+  CITY_MAX,
+  DISPLAY_NAME_MAX,
   type DatingProfile,
   type MatchRow,
   type DatingBlock,
@@ -119,9 +122,10 @@ export default function AccountLovePage() {
         .map((i) => i.trim())
         .filter(Boolean)
         .slice(0, 10),
-      minAgePref: form.minAgePref ? Number(form.minAgePref) : undefined,
-      maxAgePref: form.maxAgePref ? Number(form.maxAgePref) : undefined,
-      maxDistanceKm: form.maxDistanceKm ? Number(form.maxDistanceKm) : undefined,
+      // An emptied preference field clears it on the server.
+      minAgePref: form.minAgePref ? Number(form.minAgePref) : null,
+      maxAgePref: form.maxAgePref ? Number(form.maxAgePref) : null,
+      maxDistanceKm: form.maxDistanceKm ? Number(form.maxDistanceKm) : null,
     })
       .then((p) => {
         setProfile(p);
@@ -149,14 +153,14 @@ export default function AccountLovePage() {
     if (!file || !profile) return;
     setPhotoBusy(true);
     presignPhotoUpload(file.type)
-      .then(async ({ uploadUrl, key, publicUrl }) => {
+      .then(async ({ uploadUrl, key }) => {
         const putRes = await fetch(uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": file.type },
           body: file,
         });
         if (!putRes.ok) throw new Error("Upload failed");
-        return addPhoto({ key, url: publicUrl });
+        return addPhoto({ key });
       })
       .then((photo) => {
         setProfile((p) => (p ? { ...p, photos: [...p.photos, photo] } : p));
@@ -319,11 +323,11 @@ export default function AccountLovePage() {
 
           <form onSubmit={handleSave} className="flex flex-col gap-3 pt-2 border-t border-divider">
             <Field label="Name">
-              <Input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+              <Input value={form.displayName} maxLength={DISPLAY_NAME_MAX} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="City">
-                <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                <Input value={form.city} maxLength={CITY_MAX} onChange={(e) => setForm({ ...form, city: e.target.value })} />
               </Field>
               <Field label="Interested in">
                 <Select
@@ -337,7 +341,7 @@ export default function AccountLovePage() {
               </Field>
             </div>
             <Field label="About you">
-              <Textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+              <Textarea value={form.bio} maxLength={BIO_MAX} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
             </Field>
             <Field label="Interests (comma separated)">
               <Input value={form.interests} onChange={(e) => setForm({ ...form, interests: e.target.value })} placeholder="hiking, jazz, cooking" />
@@ -405,7 +409,10 @@ export default function AccountLovePage() {
           <div className="flex flex-col gap-2">
             {blocks.map((b) => (
               <div key={b.id} className="flex items-center gap-3 p-3 bg-card border border-divider rounded-lg">
-                <span className="flex-1 text-sm text-neutral-600">Blocked on {new Date(b.createdAt).toLocaleDateString()}</span>
+                <span className="flex-1 flex flex-col">
+                  <span className="text-sm font-medium">{b.displayName ?? "Instanta member"}</span>
+                  <span className="text-xs text-neutral-600">Blocked on {new Date(b.createdAt).toLocaleDateString()}</span>
+                </span>
                 <Button variant="secondary" onClick={() => handleUnblock(b.blockedId)}>
                   Unblock
                 </Button>

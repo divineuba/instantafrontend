@@ -21,9 +21,13 @@ import {
   discover,
   swipe,
   type DatingProfile,
+  type DiscoverProfile,
   type Gender,
   type InterestedIn,
   type SwipeDirection,
+  BIO_MAX,
+  CITY_MAX,
+  DISPLAY_NAME_MAX,
 } from "@/lib/dating";
 
 const LOW_FEED_THRESHOLD = 4;
@@ -73,6 +77,7 @@ function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => voi
         <Field label="Name">
           <Input
             value={form.displayName}
+            maxLength={DISPLAY_NAME_MAX}
             onChange={(e) => setForm({ ...form, displayName: e.target.value })}
             placeholder="How you'd like to be seen"
           />
@@ -88,6 +93,7 @@ function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => voi
           <Field label="City">
             <Input
               value={form.city}
+              maxLength={CITY_MAX}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
               placeholder="Lagos"
             />
@@ -115,6 +121,7 @@ function CreateProfileForm({ onCreated }: { onCreated: (p: DatingProfile) => voi
         <Field label="About you">
           <Textarea
             value={form.bio}
+            maxLength={BIO_MAX}
             onChange={(e) => setForm({ ...form, bio: e.target.value })}
             placeholder="A couple of lines about you"
           />
@@ -140,7 +147,7 @@ export default function LoveDiscoverPage() {
   const router = useRouter();
 
   const [profile, setProfile] = React.useState<DatingProfile | null | undefined>(undefined);
-  const [feed, setFeed] = React.useState<DatingProfile[] | null>(null);
+  const [feed, setFeed] = React.useState<DiscoverProfile[] | null>(null);
   const [nextCursor, setNextCursor] = React.useState<string | null>(null);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -194,7 +201,7 @@ export default function LoveDiscoverPage() {
     if (feed && feed.length <= LOW_FEED_THRESHOLD) loadMore();
   }, [feed, loadMore]);
 
-  function handleSwipe(target: DatingProfile, direction: SwipeDirection) {
+  function handleSwipe(target: DiscoverProfile, direction: SwipeDirection) {
     setBusy(true);
     setError(null);
     if (direction === "SUPERLIKE") setSuperlikesRemaining((n) => Math.max(0, n - 1));

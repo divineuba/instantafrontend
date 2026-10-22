@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SwipeCard } from "@/components/love/swipe-card";
-import type { DatingProfile, SwipeDirection } from "@/lib/dating";
+import type { DiscoverProfile, SwipeDirection } from "@/lib/dating";
 
 const SWIPE_THRESHOLD = 110;
 const VELOCITY_THRESHOLD = 500;
@@ -23,7 +23,7 @@ function exitTargetFor(direction: SwipeDirection) {
 
 const DraggableCard = React.forwardRef<
   CardHandle,
-  { profile: DatingProfile; busy: boolean; onSwipe: (direction: SwipeDirection) => void }
+  { profile: DiscoverProfile; busy: boolean; onSwipe: (direction: SwipeDirection) => void }
 >(function DraggableCard({ profile, busy, onSwipe }, ref) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -96,10 +96,10 @@ export function SwipeDeck({
   superlikesRemaining,
   onSwipe,
 }: {
-  profiles: DatingProfile[];
+  profiles: DiscoverProfile[];
   busy: boolean;
   superlikesRemaining: number;
-  onSwipe: (profile: DatingProfile, direction: SwipeDirection) => void;
+  onSwipe: (profile: DiscoverProfile, direction: SwipeDirection) => void;
 }) {
   const topCardRef = React.useRef<CardHandle>(null);
 
